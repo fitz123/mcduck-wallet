@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>McDuck Wallet WebApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .button {
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid var(--tg-theme-hint-color, #999999);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>McDuck Wallet</h1>
+        
+        <div id="balance">
+            <button class="button" hx-get="/balance" hx-target="#balance-amount" hx-trigger="click">Check Balance</button>
+            <div id="balance-amount"></div>
+        </div>
+        
+        <div id="transfer">
+            <h2>Transfer Money</h2>
+            <form hx-post="/transfer" hx-target="#transfer-result">
+                <input type="text" name="to_username" placeholder="Recipient's username" class="input" required>
+                <input type="number" name="amount" placeholder="Amount" class="input" required>
+                <button type="submit" class="button">Transfer</button>
+            </form>
+            <div id="transfer-result"></div>
+            <div id="transfer-error" class="error"></div>
+        </div>
+        
+        <div id="history">
+            <h2>Transaction History</h2>
+            <button class="button" hx-get="/history" hx-target="#history-list">Load History</button>
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        tg.MainButton.setText("Close Wallet").show().onClick(function(){
+            tg.close();
+        });
+
+        // Add initData to all HTMX requests as a header
+        htmx.on('htmx:configRequest', (event) => {
+            event.detail.headers['X-Telegram-Init-Data'] = tg.initData;
+            console.log('Sending request:', event.detail.method, event.detail.headers);
+        });
+
+        // Trigger balance check on load
+        document.body.addEventListener('htmx:load', function(evt) {
+            htmx.trigger("#balance button", "click");
+        });
+
+        // Log any HTMX errors
+        htmx.on('htmx:error', function(evt) {
+            console.error('HTMX Error:', evt.detail.error);
+            console.log('Error response:', evt.detail.xhr.responseText);
+            document.getElementById('transfer-error').textContent = 'Error: ' + evt.detail.xhr.responseText;
+        });
+
+        // Log successful transfers
+        htmx.on('htmx:afterSettle', function(evt) {
+            if (evt.detail.target.id === 'transfer-result' && evt.detail.xhr.status === 200) {
+                console.log('Transfer successful:', evt.detail.xhr.responseText);
+            }
+        });
+    </script>
+</body>
+</html>
