@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/handlers"
+	"github.com/fitz123/mcduck-wallet/pkg/webapp"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -30,6 +32,24 @@ func main() {
 		return
 	}
 
+	// Set up bot handlers
+	setupBotHandlers(bot)
+
+	// Initialize WebApp
+	webapp.InitAuth(os.Getenv("TELEGRAM_BOT_TOKEN"))
+	webapp.SetupRoutes()
+
+	// Start the HTTP server for WebApp
+	go func() {
+		log.Println("Starting WebApp server on :8080")
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}()
+
+	// Start the bot
+	bot.Start()
+}
+
+func setupBotHandlers(bot *tele.Bot) {
 	bot.Handle("/start", func(c tele.Context) error {
 		user, err := handlers.GetOrCreateUser(c.Sender().ID, c.Sender().Username)
 		if err != nil {
@@ -157,6 +177,4 @@ func main() {
 			return c.Send("Unknown key. Available keys: admin, balance")
 		}
 	})
-
-	bot.Start()
 }
