@@ -62,7 +62,22 @@ func setupBotHandlers(bot *tele.Bot) {
 			database.DB.Save(user)
 		}
 
-		return c.Send(fmt.Sprintf("Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is $%.2f.", user.Username, user.Balance))
+		// Create a keyboard with a WebApp button
+		webAppURL := "https://07ac-181-111-49-211.ngrok-free.app"
+		webAppButton := tele.InlineButton{
+			Text: "Open McDuck Wallet",
+			WebApp: &tele.WebApp{
+				URL: webAppURL,
+			},
+		}
+
+		keyboard := &tele.ReplyMarkup{
+			InlineKeyboard: [][]tele.InlineButton{
+				{webAppButton},
+			},
+		}
+
+		return c.Send(fmt.Sprintf("Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is $%.2f.\n\nUse the button below to open the WebApp.", user.Username, user.Balance), keyboard)
 	})
 
 	bot.Handle("/balance", func(c tele.Context) error {
