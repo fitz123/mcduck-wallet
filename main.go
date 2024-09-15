@@ -77,7 +77,7 @@ func setupBotHandlers(bot *tele.Bot) {
 			},
 		}
 
-		return c.Send(fmt.Sprintf("Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is $%.2f.\n\nUse the button below to open the WebApp.", user.Username, user.Balance), keyboard)
+		return c.Send(fmt.Sprintf("Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is ¤%.2f.\n\nUse the button below to open the WebApp.", user.Username, user.Balance), keyboard)
 	})
 
 	bot.Handle("/balance", func(c tele.Context) error {
@@ -86,7 +86,7 @@ func setupBotHandlers(bot *tele.Bot) {
 			return c.Send("Error: " + err.Error())
 		}
 
-		return c.Send(fmt.Sprintf("Your current balance is $%.2f", user.Balance))
+		return c.Send(fmt.Sprintf("Your current balance is ¤%.2f", user.Balance))
 	})
 
 	bot.Handle("/transfer", func(c tele.Context) error {
@@ -111,7 +111,7 @@ func setupBotHandlers(bot *tele.Bot) {
 			return c.Send("Transfer failed: " + err.Error())
 		}
 
-		return c.Send(fmt.Sprintf("Successfully transferred $%.2f to %s", amount, toUsername))
+		return c.Send(fmt.Sprintf("Successfully transferred ¤%.2f to %s", amount, toUsername))
 	})
 
 	bot.Handle("/history", func(c tele.Context) error {
@@ -130,12 +130,12 @@ func setupBotHandlers(bot *tele.Bot) {
 			var description string
 			if t.Type == "transfer" {
 				if t.Amount < 0 {
-					description = fmt.Sprintf("Sent $%.2f", -t.Amount)
+					description = fmt.Sprintf("Sent ¤%.2f", -t.Amount)
 				} else {
-					description = fmt.Sprintf("Received $%.2f", t.Amount)
+					description = fmt.Sprintf("Received ¤%.2f", t.Amount)
 				}
 			} else {
-				description = fmt.Sprintf("Deposited $%.2f", t.Amount)
+				description = fmt.Sprintf("Deposited ¤%.2f", t.Amount)
 			}
 			response.WriteString(fmt.Sprintf("%s - %s\n", t.Timestamp.Format("2006-01-02 15:04:05"), description))
 		}
@@ -187,7 +187,7 @@ func setupBotHandlers(bot *tele.Bot) {
 			if err != nil {
 				return c.Send("Failed to set balance: " + err.Error())
 			}
-			return c.Send(fmt.Sprintf("Successfully set balance of %s to $%.2f", targetUsername, amount))
+			return c.Send(fmt.Sprintf("Successfully set balance of %s to ¤%.2f", targetUsername, amount))
 		default:
 			return c.Send("Unknown key. Available keys: admin, balance")
 		}
