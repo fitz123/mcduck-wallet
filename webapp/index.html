@@ -95,6 +95,25 @@
                 console.log('Transfer successful:', evt.detail.xhr.responseText);
             }
         });
+
+        // Format balance response
+        htmx.on('htmx:afterSettle', function(evt) {
+            if (evt.detail.target.id === 'balance-amount') {
+                let balance = JSON.parse(evt.detail.xhr.response).balance;
+                evt.detail.target.innerText = `Your current balance: ¤${balance.toFixed(2)}`;
+            }
+        });
+
+        // Format transaction history
+        htmx.on('htmx:afterSettle', function(evt) {
+            if (evt.detail.target.id === 'history-list') {
+                let transactions = JSON.parse(evt.detail.xhr.response);
+                let html = transactions.map(t => {
+                    return `<div class="transaction">${t.timestamp} - ${t.description}</div>`;
+                }).join('');
+                evt.detail.target.innerHTML = html;
+            }
+        });
     </script>
 </body>
 </html>

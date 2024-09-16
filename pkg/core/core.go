@@ -39,7 +39,7 @@ func GetOrCreateUser(telegramID int64, username string) (*database.User, error) 
 	return &user, nil
 }
 
-func TransferMoney(fromUserID, toUserID int64, amount float64) error {
+func transferMoney(fromUserID, toUserID int64, amount float64) error {
 	if amount <= 0 {
 		return ErrNegativeAmount
 	}
@@ -97,7 +97,7 @@ func TransferMoney(fromUserID, toUserID int64, amount float64) error {
 	})
 }
 
-func GetTransactionHistory(userID int64) ([]database.Transaction, error) {
+func getTransactionHistory(userID int64) ([]database.Transaction, error) {
 	var user database.User
 	if err := database.DB.Where("telegram_id = ?", userID).First(&user).Error; err != nil {
 		return nil, ErrUserNotFound
@@ -109,50 +109,4 @@ func GetTransactionHistory(userID int64) ([]database.Transaction, error) {
 	}
 
 	return transactions, nil
-}
-
-func AdminAddMoney(adminID, targetUserID int64, amount float64) error {
-	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var admin, targetUser database.User
-
-		if err := tx.Where("telegram_id = ?", adminID).First(&admin).Error; err != nil {
-			return ErrUserNotFound
-		}
-		if !admin.IsAdmin {
-			return ErrUnauthorized
-		}
-
-		if err := tx.Where("telegram_id = ?", targetUserID).First(&targetUser).Error; err != nil {
-			return ErrUserNotFound
-		}
-
-		targetUser.Balance = amount
-
-		transaction := database.Transaction{
-			UserID:    targetUser.ID,
-			Amount:    amount - targetUser.Balance,
-			Type:      "admin_set_balance",
-			Timestamp: time.Now(),
-		}
-
-		if err := tx.Save(&targetUser).Error; err != nil {
-			return err
-		}
-		if err := tx.Create(&transaction).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
-}
-
-func SetAdminStatus(telegramID int64, isAdmin bool) error {
-	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var user database.User
-		if err := tx.Where("telegram_id = ?", telegramID).First(&user).Error; err != nil {
-			return ErrUserNotFound
-		}
-		user.IsAdmin = isAdmin
-		return tx.Save(&user).Error
-	})
 }
