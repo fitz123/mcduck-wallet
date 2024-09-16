@@ -6,15 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/fitz123/mcduck-wallet/pkg/commands"
 	"github.com/fitz123/mcduck-wallet/pkg/core"
 )
-
-var templates = template.Must(template.ParseFiles(filepath.Join("webapp", "templates", "transaction_history.html")))
 
 type webContext struct {
 	w      http.ResponseWriter
