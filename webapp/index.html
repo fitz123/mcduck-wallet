@@ -88,14 +88,13 @@
         });
 
         htmx.on('htmx:afterSettle', (evt) => {
-            if (evt.detail.target.id === 'balance-amount') {
-                let balance = JSON.parse(evt.detail.xhr.response).balance;
-                evt.detail.target.innerText = `Your current balance: ¤${balance.toFixed(2)}`;
+          if (evt.detail.target.id === 'balance-amount') {
+                evt.detail.target.innerText = evt.detail.xhr.responseText;
             } else if (evt.detail.target.id === 'history-list') {
                 let transactions = JSON.parse(evt.detail.xhr.response);
                 evt.detail.target.innerHTML = transactions.map(t => 
-                    `<div class="transaction">${t.timestamp} - ${t.description}</div>`
-                ).join('') || 'No transactions found.';
+                    `<div class="transaction">${t}</div>`
+                ).join('');
             }
         });
     </script>

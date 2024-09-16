@@ -41,7 +41,9 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]float64{"balance": balance})
+	message := fmt.Sprintf(messages.InfoCurrentBalance, balance)
+
+	json.NewEncoder(w).Encode(message)
 }
 
 func TransferMoney(w http.ResponseWriter, r *http.Request) {
