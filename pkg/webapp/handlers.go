@@ -3,16 +3,16 @@
 package webapp
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"strings"
+	"strconv"
 
-	"github.com/fitz123/mcduck-wallet/pkg/commands"
+	"github.com/fitz123/mcduck-wallet/pkg/core"
+	"github.com/fitz123/mcduck-wallet/pkg/messages"
 )
 
 type webContext struct {
-	w      http.ResponseWriter
 	r      *http.Request
 	userID int64
 }
@@ -27,60 +27,53 @@ func (wc *webContext) GetUsername() string {
 	return ""
 }
 
-func (wc *webContext) Reply(message string) error {
-	// Split the message into lines
-	lines := strings.Split(message, "\n")
-
-	// Join the lines with HTML line breaks
-	htmlMessage := strings.Join(lines, "<br>")
-
-	// Set the content type to HTML
-	wc.w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-	// Write the HTML-formatted message
-	_, err := fmt.Fprint(wc.w, htmlMessage)
-	return err
-}
-
-// SetupRoutes sets up the HTTP routes for the WebApp
-func SetupRoutes() {
-	http.HandleFunc("/balance", AuthMiddleware(getBalance))
-	http.HandleFunc("/transfer", AuthMiddleware(transferMoney))
-	http.HandleFunc("/history", AuthMiddleware(getTransactionHistory))
-	http.HandleFunc("/", serveHTML)
-}
-
-func serveHTML(w http.ResponseWriter, r *http.Request) {
+func ServeHTML(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "webapp/index.html")
 }
 
-func getBalance(w http.ResponseWriter, r *http.Request) {
+func GetBalance(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
-	ctx := &webContext{w: w, r: r, userID: userID}
-	if err := commands.Balance(ctx); err != nil {
-		handleError(w, err)
+	ctx := &webContext{r: r, userID: userID}
+
+	balance, err := core.GetBalance(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+
+	json.NewEncoder(w).Encode(map[string]float64{"balance": balance})
 }
 
-func transferMoney(w http.ResponseWriter, r *http.Request) {
+func TransferMoney(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
+	ctx := &webContext{r: r, userID: userID}
+
 	toUsername := r.FormValue("to_username")
-	amount := r.FormValue("amount")
-	ctx := &webContext{w: w, r: r, userID: userID}
-	if err := commands.Transfer(ctx, toUsername, amount); err != nil {
-		handleError(w, err)
+	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
+	if err != nil {
+		http.Error(w, "Invalid amount", http.StatusBadRequest)
+		return
 	}
+
+	err = core.TransferMoney(ctx, toUsername, amount)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUsername))
 }
 
-func getTransactionHistory(w http.ResponseWriter, r *http.Request) {
+func GetTransactionHistory(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
-	ctx := &webContext{w: w, r: r, userID: userID}
-	if err := commands.History(ctx); err != nil {
-		handleError(w, err)
-	}
-}
+	ctx := &webContext{r: r, userID: userID}
 
-func handleError(w http.ResponseWriter, err error) {
-	log.Printf("Error: %v", err)
-	http.Error(w, err.Error(), http.StatusInternalServerError)
+	transactions, err := core.GetTransactionHistory(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(formatTransactionHistory(transactions))
 }
