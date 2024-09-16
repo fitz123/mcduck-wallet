@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/commands"
-	"github.com/fitz123/mcduck-wallet/pkg/core"
 )
 
 type webContext struct {
@@ -29,7 +28,17 @@ func (wc *webContext) GetUsername() string {
 }
 
 func (wc *webContext) Reply(message string) error {
-	_, err := fmt.Fprint(wc.w, message)
+	// Split the message into lines
+	lines := strings.Split(message, "\n")
+
+	// Join the lines with HTML line breaks
+	htmlMessage := strings.Join(lines, "<br>")
+
+	// Set the content type to HTML
+	wc.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	// Write the HTML-formatted message
+	_, err := fmt.Fprint(wc.w, htmlMessage)
 	return err
 }
 
@@ -65,18 +74,10 @@ func transferMoney(w http.ResponseWriter, r *http.Request) {
 
 func getTransactionHistory(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
-	transactions, err := core.GetTransactionHistory(userID)
-	if err != nil {
-		http.Error(w, "Error fetching transaction history: "+err.Error(), http.StatusInternalServerError)
-		return
+	ctx := &webContext{w: w, r: r, userID: userID}
+	if err := commands.History(ctx); err != nil {
+		handleError(w, err)
 	}
-
-	historyText := commands.BuildTransactionHistory(transactions)
-
-	// Convert newlines to <br> tags for HTML display
-	historyHTML := strings.ReplaceAll(historyText, "\n", "<br>")
-
-	fmt.Fprint(w, historyHTML)
 }
 
 func handleError(w http.ResponseWriter, err error) {
