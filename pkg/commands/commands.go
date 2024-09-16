@@ -65,9 +65,9 @@ func BuildTransactionHistory(transactions []database.Transaction) string {
 		var description string
 		if t.Type == "transfer" {
 			if t.Amount < 0 {
-				description = fmt.Sprintf(messages.TransactionSent, -t.Amount)
+				description = fmt.Sprintf(messages.TransactionSent, -t.Amount, t.ToUsername)
 			} else {
-				description = fmt.Sprintf(messages.TransactionReceived, t.Amount)
+				description = fmt.Sprintf(messages.TransactionReceived, t.Amount, t.ToUsername)
 			}
 		} else {
 			description = fmt.Sprintf(messages.TransactionDeposited, t.Amount)

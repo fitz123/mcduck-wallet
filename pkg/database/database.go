@@ -35,9 +35,10 @@ type User struct {
 
 type Transaction struct {
 	gorm.Model
-	UserID    uint
-	Amount    float64
-	Type      string // "deposit", "transfer", or "admin_deposit"
-	ToUserID  *uint  // Pointer to allow null for deposits
-	Timestamp time.Time
+	UserID     uint
+	Amount     float64
+	Type       string // "deposit", "transfer", or "admin_deposit"
+	ToUserID   *uint  // Pointer to allow null for deposits
+	ToUsername string // New field to store the recipient's username
+	Timestamp  time.Time
 }

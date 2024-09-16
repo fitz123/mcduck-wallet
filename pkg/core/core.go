@@ -59,18 +59,20 @@ func TransferMoney(fromUserID, toUserID int64, amount float64) error {
 
 		now := time.Now()
 		fromTransaction := database.Transaction{
-			UserID:    fromUser.ID,
-			Amount:    -amount,
-			Type:      "transfer",
-			ToUserID:  &toUser.ID,
-			Timestamp: now,
+			UserID:     fromUser.ID,
+			Amount:     -amount,
+			Type:       "transfer",
+			ToUserID:   &toUser.ID,
+			ToUsername: toUser.Username,
+			Timestamp:  now,
 		}
 		toTransaction := database.Transaction{
-			UserID:    toUser.ID,
-			Amount:    amount,
-			Type:      "transfer",
-			ToUserID:  &fromUser.ID,
-			Timestamp: now,
+			UserID:     toUser.ID,
+			Amount:     amount,
+			Type:       "transfer",
+			ToUserID:   &fromUser.ID,
+			ToUsername: fromUser.Username,
+			Timestamp:  now,
 		}
 
 		if err := tx.Save(&fromUser).Error; err != nil {

@@ -55,11 +55,10 @@ func TestTransferMoney(t *testing.T) {
 	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
 
 	// Create two users
-	user1, _ := GetOrCreateUser(111111, "user1")
-	user2, _ := GetOrCreateUser(222222, "user2")
-
-	// Set initial balance for user1
-	db.Model(&user1).Update("balance", 100)
+	user1 := database.User{TelegramID: 111111, Username: "user1", Balance: 100}
+	user2 := database.User{TelegramID: 222222, Username: "user2", Balance: 50}
+	db.Create(&user1)
+	db.Create(&user2)
 
 	// Test successful transfer
 	err := TransferMoney(111111, 222222, 50)
@@ -70,8 +69,28 @@ func TestTransferMoney(t *testing.T) {
 	// Check balances
 	db.First(&user1, user1.ID)
 	db.First(&user2, user2.ID)
-	if user1.Balance != 50 || user2.Balance != 50 {
+	if user1.Balance != 50 || user2.Balance != 100 {
 		t.Errorf("Transfer failed. User1 balance: %v, User2 balance: %v", user1.Balance, user2.Balance)
+	}
+
+	// Check transactions
+	var transactions []database.Transaction
+	db.Find(&transactions)
+	if len(transactions) != 2 {
+		t.Errorf("Expected 2 transactions, got %d", len(transactions))
+	}
+	for _, tx := range transactions {
+		if tx.UserID == user1.ID {
+			if tx.Amount != -50 || tx.ToUsername != "user2" {
+				t.Errorf("Incorrect transaction for user1. Amount: %v, ToUsername: %v", tx.Amount, tx.ToUsername)
+			}
+		} else if tx.UserID == user2.ID {
+			if tx.Amount != 50 || tx.ToUsername != "user1" {
+				t.Errorf("Incorrect transaction for user2. Amount: %v, ToUsername: %v", tx.Amount, tx.ToUsername)
+			}
+		} else {
+			t.Errorf("Unexpected transaction: %v", tx)
+		}
 	}
 
 	// Test insufficient balance

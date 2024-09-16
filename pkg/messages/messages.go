@@ -22,7 +22,7 @@ const (
 	UsageSet      = "Usage: /set <@username> <key=value>"
 
 	// Transaction descriptions
-	TransactionSent      = "Sent ¤%.2f"
-	TransactionReceived  = "Received ¤%.2f"
+	TransactionSent      = "Sent ¤%.2f to %s"
+	TransactionReceived  = "Received ¤%.2f from %s"
 	TransactionDeposited = "Deposited ¤%.2f"
 )
