@@ -1,38 +1,34 @@
-package handlers
+// File: pkg/core/core.go
+
+package core
 
 import (
 	"errors"
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	"gorm.io/gorm"
 )
 
-func RegisterUser(telegramID int64, username string) error {
-	user := database.User{
-		TelegramID: telegramID,
-		Username:   username,
-		Balance:    0, // Initial balance
-	}
-
-	result := database.DB.Create(&user)
-	return result.Error
-}
+var (
+	ErrInsufficientBalance = errors.New(messages.ErrInsufficientBalance)
+	ErrUserNotFound        = errors.New(messages.ErrUserNotFound)
+	ErrUnauthorized        = errors.New(messages.ErrUnauthorized)
+)
 
 func GetOrCreateUser(telegramID int64, username string) (*database.User, error) {
 	var user database.User
 	result := database.DB.Where("telegram_id = ?", telegramID).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// User not found, create a new one
-			err := RegisterUser(telegramID, username)
-			if err != nil {
-				return nil, err
+			user = database.User{
+				TelegramID: telegramID,
+				Username:   username,
+				Balance:    0,
 			}
-			// Fetch the newly created user
-			result = database.DB.Where("telegram_id = ?", telegramID).First(&user)
-			if result.Error != nil {
-				return nil, result.Error
+			if err := database.DB.Create(&user).Error; err != nil {
+				return nil, err
 			}
 		} else {
 			return nil, result.Error
@@ -46,26 +42,21 @@ func TransferMoney(fromUserID, toUserID int64, amount float64) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		var fromUser, toUser database.User
 
-		// Get the sender
 		if err := tx.Where("telegram_id = ?", fromUserID).First(&fromUser).Error; err != nil {
-			return err
+			return ErrUserNotFound
 		}
 
-		// Check if sender has enough balance
 		if fromUser.Balance < amount {
-			return errors.New("insufficient balance")
+			return ErrInsufficientBalance
 		}
 
-		// Get the receiver
 		if err := tx.Where("telegram_id = ?", toUserID).First(&toUser).Error; err != nil {
-			return err
+			return ErrUserNotFound
 		}
 
-		// Update balances
 		fromUser.Balance -= amount
 		toUser.Balance += amount
 
-		// Create transactions
 		now := time.Now()
 		fromTransaction := database.Transaction{
 			UserID:    fromUser.ID,
@@ -82,7 +73,6 @@ func TransferMoney(fromUserID, toUserID int64, amount float64) error {
 			Timestamp: now,
 		}
 
-		// Save everything
 		if err := tx.Save(&fromUser).Error; err != nil {
 			return err
 		}
@@ -103,7 +93,7 @@ func TransferMoney(fromUserID, toUserID int64, amount float64) error {
 func GetTransactionHistory(userID int64) ([]database.Transaction, error) {
 	var user database.User
 	if err := database.DB.Where("telegram_id = ?", userID).First(&user).Error; err != nil {
-		return nil, err
+		return nil, ErrUserNotFound
 	}
 
 	var transactions []database.Transaction
@@ -118,31 +108,26 @@ func AdminAddMoney(adminID, targetUserID int64, amount float64) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		var admin, targetUser database.User
 
-		// Verify admin
 		if err := tx.Where("telegram_id = ?", adminID).First(&admin).Error; err != nil {
-			return errors.New("admin not found")
+			return ErrUserNotFound
 		}
 		if !admin.IsAdmin {
-			return errors.New("unauthorized: user is not an admin")
+			return ErrUnauthorized
 		}
 
-		// Get target user
 		if err := tx.Where("telegram_id = ?", targetUserID).First(&targetUser).Error; err != nil {
-			return errors.New("target user not found")
+			return ErrUserNotFound
 		}
 
-		// Update balance
-		targetUser.Balance = amount // Set the balance to the specified amount
+		targetUser.Balance = amount
 
-		// Create transaction
 		transaction := database.Transaction{
 			UserID:    targetUser.ID,
-			Amount:    amount - targetUser.Balance, // The difference is the amount added
+			Amount:    amount - targetUser.Balance,
 			Type:      "admin_set_balance",
 			Timestamp: time.Now(),
 		}
 
-		// Save everything
 		if err := tx.Save(&targetUser).Error; err != nil {
 			return err
 		}
@@ -158,7 +143,7 @@ func SetAdminStatus(telegramID int64, isAdmin bool) error {
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		var user database.User
 		if err := tx.Where("telegram_id = ?", telegramID).First(&user).Error; err != nil {
-			return err
+			return ErrUserNotFound
 		}
 		user.IsAdmin = isAdmin
 		return tx.Save(&user).Error
