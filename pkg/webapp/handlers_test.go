@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"gorm.io/driver/sqlite"
@@ -134,8 +135,9 @@ func TestGetTransactionHistory(t *testing.T) {
 
 	// Create some test transactions
 	transactions := []database.Transaction{
-		{UserID: user.ID, Amount: 50, Type: "deposit"},
-		{UserID: user.ID, Amount: -20, Type: "transfer"},
+		{UserID: user.ID, Amount: 50, Type: "deposit", Timestamp: time.Now().Add(-2 * time.Hour)},
+		{UserID: user.ID, Amount: -20, Type: "transfer", ToUsername: "recipient1", Timestamp: time.Now().Add(-1 * time.Hour)},
+		{UserID: user.ID, Amount: 30, Type: "transfer", ToUsername: "sender1", Timestamp: time.Now()},
 	}
 	db.Create(&transactions)
 
@@ -164,7 +166,15 @@ func TestGetTransactionHistory(t *testing.T) {
 	}
 
 	// Check if the response contains transaction information
-	if !strings.Contains(rr.Body.String(), "Deposited ¤50.00") || !strings.Contains(rr.Body.String(), "Sent ¤20.00") {
-		t.Errorf("handler returned unexpected body: %v", rr.Body.String())
+	expectedResponses := []string{
+		"Deposited ¤50.00",
+		"Sent ¤20.00 to recipient1",
+		"Received ¤30.00 from sender1",
+	}
+
+	for _, expected := range expectedResponses {
+		if !strings.Contains(rr.Body.String(), expected) {
+			t.Errorf("handler response doesn't contain expected content: %v", expected)
+		}
 	}
 }
