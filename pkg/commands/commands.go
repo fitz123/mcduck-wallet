@@ -53,6 +53,16 @@ func Transfer(ctx CommandContext, args ...string) error {
 	return ctx.Reply(fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUsername))
 }
 
+// History handles the transaction history command
+func History(ctx CommandContext) error {
+	transactions, err := core.GetTransactionHistory(ctx.GetUserID())
+	if err != nil {
+		return ctx.Reply("Error fetching transaction history: " + err.Error())
+	}
+
+	return ctx.Reply(BuildTransactionHistory(transactions))
+}
+
 // BuildTransactionHistory creates a string representation of the transaction history
 func BuildTransactionHistory(transactions []database.Transaction) string {
 	if len(transactions) == 0 {
@@ -76,14 +86,4 @@ func BuildTransactionHistory(transactions []database.Transaction) string {
 	}
 
 	return response.String()
-}
-
-// History handles the transaction history command
-func History(ctx CommandContext) error {
-	transactions, err := core.GetTransactionHistory(ctx.GetUserID())
-	if err != nil {
-		return ctx.Reply("Error fetching transaction history: " + err.Error())
-	}
-
-	return ctx.Reply(BuildTransactionHistory(transactions))
 }

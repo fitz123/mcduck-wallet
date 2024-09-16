@@ -236,32 +236,6 @@ func TestGetOrCreateUserWithNewUser(t *testing.T) {
 	}
 }
 
-func TestTransferMoneyInsufficientBalance(t *testing.T) {
-	db := setupTestDB()
-	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
-
-	// Create users
-	sender := database.User{TelegramID: 123456, Username: "sender", Balance: 50}
-	receiver := database.User{TelegramID: 789012, Username: "receiver", Balance: 0}
-	db.Create(&sender)
-	db.Create(&receiver)
-
-	// Attempt to transfer more money than the sender has
-	err := TransferMoney(sender.TelegramID, receiver.TelegramID, 100)
-	if err != ErrInsufficientBalance {
-		t.Errorf("Expected insufficient balance error, got: %v", err)
-	}
-
-	// Check that balances remain unchanged
-	var updatedSender, updatedReceiver database.User
-	db.First(&updatedSender, sender.ID)
-	db.First(&updatedReceiver, receiver.ID)
-
-	if updatedSender.Balance != 50 || updatedReceiver.Balance != 0 {
-		t.Errorf("Balances should not have changed. Sender: %v, Receiver: %v", updatedSender.Balance, updatedReceiver.Balance)
-	}
-}
-
 func TestAdminAddMoneyUnauthorized(t *testing.T) {
 	db := setupTestDB()
 	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
@@ -284,5 +258,116 @@ func TestAdminAddMoneyUnauthorized(t *testing.T) {
 
 	if updatedTargetUser.Balance != 0 {
 		t.Errorf("Target user's balance should not have changed. Got: %v", updatedTargetUser.Balance)
+	}
+}
+
+func TestTransferMoneyNegativeAmount(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create users
+	sender := database.User{TelegramID: 123456, Username: "sender", Balance: 100}
+	receiver := database.User{TelegramID: 789012, Username: "receiver", Balance: 50}
+	db.Create(&sender)
+	db.Create(&receiver)
+
+	// Attempt to transfer a negative amount
+	err := TransferMoney(sender.TelegramID, receiver.TelegramID, -50)
+	if err != ErrNegativeAmount {
+		t.Errorf("Expected ErrNegativeAmount, got: %v", err)
+	}
+
+	// Check that balances remain unchanged
+	var updatedSender, updatedReceiver database.User
+	db.First(&updatedSender, sender.ID)
+	db.First(&updatedReceiver, receiver.ID)
+
+	if updatedSender.Balance != 100 || updatedReceiver.Balance != 50 {
+		t.Errorf("Balances should not have changed. Sender: %v, Receiver: %v", updatedSender.Balance, updatedReceiver.Balance)
+	}
+}
+
+func TestTransferMoneyZeroAmount(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create users
+	sender := database.User{TelegramID: 123456, Username: "sender", Balance: 100}
+	receiver := database.User{TelegramID: 789012, Username: "receiver", Balance: 50}
+	db.Create(&sender)
+	db.Create(&receiver)
+
+	// Attempt to transfer zero amount
+	err := TransferMoney(sender.TelegramID, receiver.TelegramID, 0)
+	if err != ErrNegativeAmount {
+		t.Errorf("Expected ErrNegativeAmount, got: %v", err)
+	}
+
+	// Check that balances remain unchanged
+	var updatedSender, updatedReceiver database.User
+	db.First(&updatedSender, sender.ID)
+	db.First(&updatedReceiver, receiver.ID)
+
+	if updatedSender.Balance != 100 || updatedReceiver.Balance != 50 {
+		t.Errorf("Balances should not have changed. Sender: %v, Receiver: %v", updatedSender.Balance, updatedReceiver.Balance)
+	}
+}
+
+func TestTransferMoneyInsufficientBalance(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create users
+	sender := database.User{TelegramID: 123456, Username: "sender", Balance: 100}
+	receiver := database.User{TelegramID: 789012, Username: "receiver", Balance: 50}
+	db.Create(&sender)
+	db.Create(&receiver)
+
+	// Attempt to transfer more than the sender's balance
+	err := TransferMoney(sender.TelegramID, receiver.TelegramID, 150)
+	if err != ErrInsufficientBalance {
+		t.Errorf("Expected ErrInsufficientBalance, got: %v", err)
+	}
+
+	// Check that balances remain unchanged
+	var updatedSender, updatedReceiver database.User
+	db.First(&updatedSender, sender.ID)
+	db.First(&updatedReceiver, receiver.ID)
+
+	if updatedSender.Balance != 100 || updatedReceiver.Balance != 50 {
+		t.Errorf("Balances should not have changed. Sender: %v, Receiver: %v", updatedSender.Balance, updatedReceiver.Balance)
+	}
+}
+
+func TestTransferMoneySuccess(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create users
+	sender := database.User{TelegramID: 123456, Username: "sender", Balance: 100}
+	receiver := database.User{TelegramID: 789012, Username: "receiver", Balance: 50}
+	db.Create(&sender)
+	db.Create(&receiver)
+
+	// Perform a valid transfer
+	err := TransferMoney(sender.TelegramID, receiver.TelegramID, 75)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	// Check that balances are updated correctly
+	var updatedSender, updatedReceiver database.User
+	db.First(&updatedSender, sender.ID)
+	db.First(&updatedReceiver, receiver.ID)
+
+	if updatedSender.Balance != 25 || updatedReceiver.Balance != 125 {
+		t.Errorf("Balances not updated correctly. Sender: %v, Receiver: %v", updatedSender.Balance, updatedReceiver.Balance)
+	}
+
+	// Check that transactions were created
+	var transactions []database.Transaction
+	db.Find(&transactions)
+	if len(transactions) != 2 {
+		t.Errorf("Expected 2 transactions, got %d", len(transactions))
 	}
 }

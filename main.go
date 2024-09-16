@@ -80,7 +80,7 @@ func setupBotHandlers(bot *tele.Bot) {
 		}
 
 		// Create a keyboard with a WebApp button
-		webAppURL := "https://07ac-181-111-49-211.ngrok-free.app"
+		webAppURL := "https://3a64-181-111-49-211.ngrok-free.app"
 		webAppButton := tele.InlineButton{
 			Text: "Open McDuck Wallet",
 			WebApp: &tele.WebApp{

@@ -9,6 +9,7 @@ const (
 	ErrUnauthorized        = "Unauthorized: user is not an admin"
 	ErrInvalidAmount       = "Invalid amount. Please enter a number."
 	ErrRecipientNotFound   = "Recipient not found."
+	ErrNegativeAmount      = "Transfer amount must be positive"
 
 	// Info messages
 	InfoCurrentBalance     = "Your current balance is ¤%.2f"
