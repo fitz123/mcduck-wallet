@@ -15,6 +15,7 @@ var (
 	ErrInsufficientBalance = errors.New(messages.ErrInsufficientBalance)
 	ErrUserNotFound        = errors.New(messages.ErrUserNotFound)
 	ErrUnauthorized        = errors.New(messages.ErrUnauthorized)
+	ErrNegativeAmount      = errors.New(messages.ErrNegativeAmount)
 )
 
 func GetOrCreateUser(telegramID int64, username string) (*database.User, error) {
@@ -39,6 +40,10 @@ func GetOrCreateUser(telegramID int64, username string) (*database.User, error) 
 }
 
 func TransferMoney(fromUserID, toUserID int64, amount float64) error {
+	if amount <= 0 {
+		return ErrNegativeAmount
+	}
+
 	return database.DB.Transaction(func(tx *gorm.DB) error {
 		var fromUser, toUser database.User
 
