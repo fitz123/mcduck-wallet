@@ -14,10 +14,7 @@
             background-color: var(--tg-theme-bg-color, #ffffff);
             color: var(--tg-theme-text-color, #000000);
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
+        .container { max-width: 600px; margin: 0 auto; }
         .button {
             background-color: var(--tg-theme-button-color, #3390ec);
             color: var(--tg-theme-button-text-color, #ffffff);
@@ -34,6 +31,13 @@
             border: 1px solid var(--tg-theme-hint-color, #999999);
             border-radius: 5px;
         }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { color: #008000; background-color: #e6ffe6; border: 1px solid #008000; }
+        .error { color: #ff0000; background-color: #ffeeee; border: 1px solid #ff0000; }
     </style>
 </head>
 <body>
@@ -41,7 +45,7 @@
         <h1>McDuck Wallet</h1>
         
         <div id="balance">
-            <button class="button" hx-get="/balance" hx-target="#balance-amount" hx-trigger="click">Check Balance</button>
+            <button class="button" hx-get="/balance" hx-target="#balance-amount">Check Balance</button>
             <div id="balance-amount"></div>
         </div>
         
@@ -53,7 +57,6 @@
                 <button type="submit" class="button">Transfer</button>
             </form>
             <div id="transfer-result"></div>
-            <div id="transfer-error" class="error"></div>
         </div>
         
         <div id="history">
@@ -66,52 +69,33 @@
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-        
-        tg.MainButton.setText("Close Wallet").show().onClick(function(){
-            tg.close();
-        });
+        tg.MainButton.setText("Close Wallet").show().onClick(() => tg.close());
 
-        // Add initData to all HTMX requests as a header
         htmx.on('htmx:configRequest', (event) => {
             event.detail.headers['X-Telegram-Init-Data'] = tg.initData;
-            console.log('Sending request:', event.detail.method, event.detail.headers);
         });
 
-        // Trigger balance check on load
-        document.body.addEventListener('htmx:load', function(evt) {
-            htmx.trigger("#balance button", "click");
-        });
+        htmx.on('htmx:load', () => htmx.trigger("#balance button", "click"));
 
-        // Log any HTMX errors
-        htmx.on('htmx:error', function(evt) {
-            console.error('HTMX Error:', evt.detail.error);
-            console.log('Error response:', evt.detail.xhr.responseText);
-            document.getElementById('transfer-error').textContent = 'Error: ' + evt.detail.xhr.responseText;
-        });
-
-        // Log successful transfers
-        htmx.on('htmx:afterSettle', function(evt) {
-            if (evt.detail.target.id === 'transfer-result' && evt.detail.xhr.status === 200) {
-                console.log('Transfer successful:', evt.detail.xhr.responseText);
+        htmx.on('htmx:afterRequest', (evt) => {
+            if (evt.detail.target.id === 'transfer-result') {
+                let response = evt.detail.xhr.responseText;
+                let isError = evt.detail.failed || evt.detail.xhr.status !== 200;
+                let messageClass = isError ? 'error' : 'success';
+                let messagePrefix = isError ? 'Transfer failed: ' : '';
+                evt.detail.target.innerHTML = `<div class="message ${messageClass}">${messagePrefix}${response}</div>`;
             }
         });
 
-        // Format balance response
-        htmx.on('htmx:afterSettle', function(evt) {
+        htmx.on('htmx:afterSettle', (evt) => {
             if (evt.detail.target.id === 'balance-amount') {
                 let balance = JSON.parse(evt.detail.xhr.response).balance;
                 evt.detail.target.innerText = `Your current balance: ¤${balance.toFixed(2)}`;
-            }
-        });
-
-        // Format transaction history
-        htmx.on('htmx:afterSettle', function(evt) {
-            if (evt.detail.target.id === 'history-list') {
+            } else if (evt.detail.target.id === 'history-list') {
                 let transactions = JSON.parse(evt.detail.xhr.response);
-                let html = transactions.map(t => {
-                    return `<div class="transaction">${t.timestamp} - ${t.description}</div>`;
-                }).join('');
-                evt.detail.target.innerHTML = html;
+                evt.detail.target.innerHTML = transactions.map(t => 
+                    `<div class="transaction">${t.timestamp} - ${t.description}</div>`
+                ).join('') || 'No transactions found.';
             }
         });
     </script>
