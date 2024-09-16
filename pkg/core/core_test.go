@@ -182,3 +182,88 @@ func TestSetAdminStatus(t *testing.T) {
 		t.Errorf("Expected user not found error, got: %v", err)
 	}
 }
+
+func TestGetOrCreateUserWithExistingUser(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create an initial user
+	initialUser := database.User{TelegramID: 123456, Username: "existinguser", Balance: 100}
+	db.Create(&initialUser)
+
+	// Try to get or create the same user
+	user, err := GetOrCreateUser(123456, "existinguser")
+	if err != nil {
+		t.Errorf("Failed to get existing user: %v", err)
+	}
+
+	if user.TelegramID != 123456 || user.Username != "existinguser" || user.Balance != 100 {
+		t.Errorf("Unexpected user data. Got: %+v", user)
+	}
+}
+
+func TestGetOrCreateUserWithNewUser(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Try to get or create a new user
+	user, err := GetOrCreateUser(789012, "newuser")
+	if err != nil {
+		t.Errorf("Failed to create new user: %v", err)
+	}
+
+	if user.TelegramID != 789012 || user.Username != "newuser" || user.Balance != 0 {
+		t.Errorf("Unexpected user data. Got: %+v", user)
+	}
+}
+
+func TestTransferMoneyInsufficientBalance(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create users
+	sender := database.User{TelegramID: 123456, Username: "sender", Balance: 50}
+	receiver := database.User{TelegramID: 789012, Username: "receiver", Balance: 0}
+	db.Create(&sender)
+	db.Create(&receiver)
+
+	// Attempt to transfer more money than the sender has
+	err := TransferMoney(sender.TelegramID, receiver.TelegramID, 100)
+	if err != ErrInsufficientBalance {
+		t.Errorf("Expected insufficient balance error, got: %v", err)
+	}
+
+	// Check that balances remain unchanged
+	var updatedSender, updatedReceiver database.User
+	db.First(&updatedSender, sender.ID)
+	db.First(&updatedReceiver, receiver.ID)
+
+	if updatedSender.Balance != 50 || updatedReceiver.Balance != 0 {
+		t.Errorf("Balances should not have changed. Sender: %v, Receiver: %v", updatedSender.Balance, updatedReceiver.Balance)
+	}
+}
+
+func TestAdminAddMoneyUnauthorized(t *testing.T) {
+	db := setupTestDB()
+	defer db.Migrator().DropTable(&database.User{}, &database.Transaction{})
+
+	// Create a non-admin user
+	nonAdmin := database.User{TelegramID: 123456, Username: "nonadmin", IsAdmin: false}
+	targetUser := database.User{TelegramID: 789012, Username: "targetuser", Balance: 0}
+	db.Create(&nonAdmin)
+	db.Create(&targetUser)
+
+	// Attempt to add money as a non-admin
+	err := AdminAddMoney(nonAdmin.TelegramID, targetUser.TelegramID, 100)
+	if err != ErrUnauthorized {
+		t.Errorf("Expected unauthorized error, got: %v", err)
+	}
+
+	// Check that target user's balance remains unchanged
+	var updatedTargetUser database.User
+	db.First(&updatedTargetUser, targetUser.ID)
+
+	if updatedTargetUser.Balance != 0 {
+		t.Errorf("Target user's balance should not have changed. Got: %v", updatedTargetUser.Balance)
+	}
+}
