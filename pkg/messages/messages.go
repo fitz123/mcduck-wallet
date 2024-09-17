@@ -4,12 +4,13 @@ package messages
 
 const (
 	// Error messages
-	ErrInsufficientBalance = "Insufficient balance"
-	ErrUserNotFound        = "User not found"
-	ErrUnauthorized        = "Unauthorized: user is not an admin"
-	ErrInvalidAmount       = "Invalid amount. Please enter a number."
-	ErrRecipientNotFound   = "Recipient not found."
-	ErrNegativeAmount      = "Transfer amount must be positive"
+	ErrInsufficientBalance  = "Insufficient balance"
+	ErrUserNotFound         = "User not found"
+	ErrUnauthorized         = "Unauthorized: user is not an admin"
+	ErrInvalidAmount        = "Invalid amount. Please enter a number."
+	ErrRecipientNotFound    = "Recipient not found."
+	ErrNegativeAmount       = "Transfer amount must be positive"
+	ErrCannotTransferToSelf = "Cannot transfer to self"
 
 	// Info messages
 	InfoCurrentBalance     = "Your current balance is ¤%.2f"
