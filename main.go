@@ -39,6 +39,8 @@ func main() {
 	teleBot.Handle("/transfer", bot.HandleTransfer)
 	teleBot.Handle("/history", bot.HandleHistory)
 	teleBot.Handle("/set", bot.HandleAdminSet)
+	teleBot.Handle("/listusers", bot.HandleAdminListUsers)
+	teleBot.Handle("/removeuser", bot.HandleAdminRemoveUser)
 	logger.Info("Bot handlers set up")
 
 	// Initialize WebApp
