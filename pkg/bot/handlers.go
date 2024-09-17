@@ -5,6 +5,7 @@ package bot
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
 	"github.com/fitz123/mcduck-wallet/pkg/database"
@@ -70,7 +71,7 @@ func HandleTransfer(c tele.Context) error {
 		return c.Send(messages.UsageTransfer)
 	}
 
-	toUsername := args[0]
+	toUsername := strings.TrimPrefix(args[0], "@")
 	amount, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
 		return c.Send(messages.ErrInvalidAmount)
