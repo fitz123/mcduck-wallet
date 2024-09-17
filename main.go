@@ -1,11 +1,12 @@
-// File: main.go
-
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/bot"
@@ -48,11 +49,21 @@ func main() {
 	logger.Info("WebApp authentication initialized")
 
 	// Set up webapp routes
-	http.HandleFunc("/balance", webapp.AuthMiddleware(webapp.GetBalance))
-	http.HandleFunc("/transfer", webapp.AuthMiddleware(webapp.TransferMoney))
-	http.HandleFunc("/history", webapp.AuthMiddleware(webapp.GetTransactionHistory))
-	http.HandleFunc("/", webapp.ServeHTML)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/balance", webapp.AuthMiddleware(webapp.GetBalance))
+	mux.HandleFunc("/transfer", webapp.AuthMiddleware(webapp.TransferMoney))
+	mux.HandleFunc("/history", webapp.AuthMiddleware(webapp.GetTransactionHistory))
+	mux.HandleFunc("/", webapp.ServeHTML)
 	logger.Info("WebApp routes set up")
+
+	// Create a new server
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: mux,
+	}
+
+	// Channel to signal shutdown
+	shutdown := make(chan struct{})
 
 	// Start the bot in a separate goroutine
 	go func() {
@@ -60,7 +71,45 @@ func main() {
 		teleBot.Start()
 	}()
 
-	// Start the HTTP server for WebApp
-	logger.Info("Starting WebApp server on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Start the HTTP server in a separate goroutine
+	go func() {
+		logger.Info("Starting WebApp server on :8080")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("WebApp server error", "error", err)
+		}
+	}()
+
+	// Set up signal catching
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+	// Wait for interrupt signal
+	<-signalChan
+	logger.Info("Received interrupt signal, shutting down gracefully...")
+
+	// Stop the bot
+	teleBot.Stop()
+	logger.Info("Telegram bot stopped")
+
+	// Create a deadline for server shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Attempt to gracefully shutdown the server
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Error("Server forced to shutdown", "error", err)
+	}
+
+	logger.Info("Server stopped")
+
+	// Close the database connection
+	if db, err := database.DB.DB(); err == nil {
+		db.Close()
+		logger.Info("Database connection closed")
+	}
+
+	// Signal successful shutdown
+	close(shutdown)
+
+	logger.Info("Shutdown complete")
 }
