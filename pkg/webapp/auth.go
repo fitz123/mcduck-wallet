@@ -1,4 +1,4 @@
-// File: webapp/auth.go
+// File: pkg/webapp/auth.go
 
 package webapp
 
@@ -9,11 +9,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
+
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 )
 
 var BotToken string
@@ -21,6 +22,7 @@ var BotToken string
 // InitAuth initializes the authentication module with the bot token
 func InitAuth(botToken string) {
 	BotToken = botToken
+	logger.Info("Authentication module initialized")
 }
 
 // AuthMiddleware is a middleware that validates the Telegram WebApp init data
@@ -29,25 +31,25 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		initData := r.Header.Get("X-Telegram-Init-Data")
 
 		if initData == "" {
-			log.Println("No initData received")
+			logger.Warn("No initData received")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		if !validateInitData(initData) {
-			log.Println("Invalid initData")
+			logger.Warn("Invalid initData")
 			http.Error(w, "Invalid init data", http.StatusUnauthorized)
 			return
 		}
 
 		userID, err := getUserIDFromInitData(initData)
 		if err != nil {
-			log.Printf("Error getting user ID: %v", err)
+			logger.Error("Error getting user ID", "error", err)
 			http.Error(w, "Invalid user data", http.StatusUnauthorized)
 			return
 		}
 
-		log.Printf("Authenticated user ID: %d", userID)
+		logger.Info("Authenticated user", "userID", userID)
 
 		// Set user ID in context
 		ctx := r.Context()
@@ -111,5 +113,6 @@ func getUserIDFromInitData(initData string) (int64, error) {
 // GetUserIDFromContext retrieves the user ID from the request context
 func GetUserIDFromContext(r *http.Request) int64 {
 	userID, _ := r.Context().Value("userID").(int64)
+	logger.Debug("Retrieved user ID from context", "userID", userID)
 	return userID
 }
