@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	"gorm.io/gorm"
 )
@@ -21,19 +22,46 @@ var (
 
 func GetOrCreateUser(telegramID int64, username string) (*database.User, error) {
 	var user database.User
-	result := database.DB.Where("telegram_id = ?", telegramID).First(&user)
+
+	// Try to find the user, including soft-deleted ones
+	result := database.DB.Unscoped().Where("telegram_id = ?", telegramID).First(&user)
+
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// User doesn't exist, create a new one
 			user = database.User{
 				TelegramID: telegramID,
 				Username:   username,
 				Balance:    0,
 			}
 			if err := database.DB.Create(&user).Error; err != nil {
+				logger.Error("Failed to create new user", "error", err, "telegramID", telegramID)
 				return nil, err
 			}
+			logger.Info("New user created", "telegramID", telegramID, "username", username)
 		} else {
+			// Some other error occurred
+			logger.Error("Error while fetching user", "error", result.Error, "telegramID", telegramID)
 			return nil, result.Error
+		}
+	} else {
+		// User found (might be soft-deleted)
+		if user.DeletedAt.Valid {
+			// User was soft-deleted, restore it
+			if err := database.DB.Unscoped().Model(&user).Update("deleted_at", nil).Error; err != nil {
+				logger.Error("Failed to restore soft-deleted user", "error", err, "telegramID", telegramID)
+				return nil, err
+			}
+			logger.Info("Soft-deleted user restored", "telegramID", telegramID, "username", username)
+		}
+
+		// Update username if it has changed
+		if user.Username != username {
+			if err := database.DB.Model(&user).Update("username", username).Error; err != nil {
+				logger.Error("Failed to update username", "error", err, "telegramID", telegramID)
+				return nil, err
+			}
+			logger.Info("Username updated", "telegramID", telegramID, "oldUsername", user.Username, "newUsername", username)
 		}
 	}
 
