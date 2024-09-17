@@ -65,6 +65,10 @@ func main() {
 	// Channel to signal shutdown
 	shutdown := make(chan struct{})
 
+	// Set up signal catching
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
 	// Start the bot in a separate goroutine
 	go func() {
 		logger.Info("Starting Telegram bot...")
@@ -79,37 +83,37 @@ func main() {
 		}
 	}()
 
-	// Set up signal catching
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-
 	// Wait for interrupt signal
-	<-signalChan
-	logger.Info("Received interrupt signal, shutting down gracefully...")
+	go func() {
+		<-signalChan
+		logger.Info("Received interrupt signal, shutting down gracefully...")
 
-	// Stop the bot
-	teleBot.Stop()
-	logger.Info("Telegram bot stopped")
+		// Stop the bot
+		teleBot.Stop()
+		logger.Info("Telegram bot stopped")
 
-	// Create a deadline for server shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+		// Create a deadline for server shutdown
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-	// Attempt to gracefully shutdown the server
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", "error", err)
-	}
+		// Attempt to gracefully shutdown the server
+		if err := server.Shutdown(ctx); err != nil {
+			logger.Error("Server forced to shutdown", "error", err)
+		}
 
-	logger.Info("Server stopped")
+		logger.Info("Server stopped")
 
-	// Close the database connection
-	if db, err := database.DB.DB(); err == nil {
-		db.Close()
-		logger.Info("Database connection closed")
-	}
+		// Close the database connection
+		if db, err := database.DB.DB(); err == nil {
+			db.Close()
+			logger.Info("Database connection closed")
+		}
 
-	// Signal successful shutdown
-	close(shutdown)
+		// Signal successful shutdown
+		close(shutdown)
+	}()
 
+	// Wait for shutdown to complete
+	<-shutdown
 	logger.Info("Shutdown complete")
 }
