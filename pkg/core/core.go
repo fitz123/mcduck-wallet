@@ -20,52 +20,43 @@ var (
 	ErrCannotTransferToSelf = errors.New(messages.ErrCannotTransferToSelf)
 )
 
-func GetOrCreateUser(telegramID int64, username string) (*database.User, error) {
+func GetUser(telegramID int64) (*database.User, error) {
 	var user database.User
-
-	// Try to find the user, including soft-deleted ones
-	result := database.DB.Unscoped().Where("telegram_id = ?", telegramID).First(&user)
-
+	result := database.DB.Where("telegram_id = ?", telegramID).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// User doesn't exist, create a new one
-			user = database.User{
-				TelegramID: telegramID,
-				Username:   username,
-				Balance:    0,
-			}
-			if err := database.DB.Create(&user).Error; err != nil {
-				logger.Error("Failed to create new user", "error", err, "telegramID", telegramID)
-				return nil, err
-			}
-			logger.Info("New user created", "telegramID", telegramID, "username", username)
-		} else {
-			// Some other error occurred
-			logger.Error("Error while fetching user", "error", result.Error, "telegramID", telegramID)
-			return nil, result.Error
+			return nil, ErrUserNotFound
 		}
-	} else {
-		// User found (might be soft-deleted)
-		if user.DeletedAt.Valid {
-			// User was soft-deleted, restore it
-			if err := database.DB.Unscoped().Model(&user).Update("deleted_at", nil).Error; err != nil {
-				logger.Error("Failed to restore soft-deleted user", "error", err, "telegramID", telegramID)
-				return nil, err
-			}
-			logger.Info("Soft-deleted user restored", "telegramID", telegramID, "username", username)
-		}
-
-		// Update username if it has changed
-		if user.Username != username && username != "" {
-			if err := database.DB.Model(&user).Update("username", username).Error; err != nil {
-				logger.Error("Failed to update username", "error", err, "telegramID", telegramID)
-				return nil, err
-			}
-			logger.Info("Username updated", "telegramID", telegramID, "oldUsername", user.Username, "newUsername", username)
-		}
+		return nil, result.Error
 	}
-
 	return &user, nil
+}
+
+func CreateUser(telegramID int64, username string) (*database.User, error) {
+	user := database.User{
+		TelegramID: telegramID,
+		Username:   username,
+		Balance:    0,
+	}
+	if err := database.DB.Create(&user).Error; err != nil {
+		logger.Error("Failed to create new user", "error", err, "telegramID", telegramID)
+		return nil, err
+	}
+	logger.Info("New user created", "telegramID", telegramID, "username", username)
+	return &user, nil
+}
+
+func UpdateUsername(telegramID int64, username string) error {
+	result := database.DB.Model(&database.User{}).Where("telegram_id = ?", telegramID).Update("username", username)
+	if result.Error != nil {
+		logger.Error("Failed to update username", "error", result.Error, "telegramID", telegramID)
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrUserNotFound
+	}
+	logger.Info("Username updated", "telegramID", telegramID, "newUsername", username)
+	return nil
 }
 
 func transferMoney(fromUserID, toUserID int64, amount float64) error {

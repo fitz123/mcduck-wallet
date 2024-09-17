@@ -5,7 +5,6 @@ package bot
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
@@ -25,9 +24,24 @@ func (bc *botContext) GetUsername() string {
 }
 
 func HandleStart(c tele.Context) error {
-	user, err := core.GetOrCreateUser(c.Sender().ID, c.Sender().Username)
+	user, err := core.GetUser(c.Sender().ID)
 	if err != nil {
-		return c.Send("Error: " + err.Error())
+		if err == core.ErrUserNotFound {
+			user, err = core.CreateUser(c.Sender().ID, c.Sender().Username)
+			if err != nil {
+				return c.Send("Error creating user: " + err.Error())
+			}
+		} else {
+			return c.Send("Error: " + err.Error())
+		}
+	} else {
+		// Update username if it has changed
+		if user.Username != c.Sender().Username {
+			err = core.UpdateUsername(c.Sender().ID, c.Sender().Username)
+			if err != nil {
+				return c.Send("Error updating username: " + err.Error())
+			}
+		}
 	}
 
 	// Create a keyboard with a WebApp button
@@ -45,7 +59,7 @@ func HandleStart(c tele.Context) error {
 		},
 	}
 
-	return c.Send(fmt.Sprintf("Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is ¤%.2f.\n\nUse the button below to open the WebApp.", user.Username, user.Balance), keyboard)
+	return c.Send(fmt.Sprintf(messages.InfoWelcome, user.Username, user.Balance), keyboard)
 }
 
 func HandleBalance(c tele.Context) error {
@@ -64,18 +78,18 @@ func HandleTransfer(c tele.Context) error {
 		return c.Send(messages.UsageTransfer)
 	}
 
-	toUsername := strings.TrimPrefix(args[0], "@")
+	toUser := args[0]
 	amount, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
 		return c.Send(messages.ErrInvalidAmount)
 	}
 
-	err = core.TransferMoney(ctx, toUsername, amount)
+	err = core.TransferMoney(ctx, args[0], amount)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Transfer failed: %v", err))
 	}
 
-	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUsername))
+	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUser))
 }
 
 func HandleHistory(c tele.Context) error {

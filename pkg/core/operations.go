@@ -3,6 +3,8 @@
 package core
 
 import (
+	"strings"
+
 	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/logger"
 )
@@ -10,12 +12,11 @@ import (
 // OperationContext represents the context in which an operation is executed
 type OperationContext interface {
 	GetUserID() int64
-	GetUsername() string
 }
 
 // GetBalance retrieves the balance for a user
 func GetBalance(ctx OperationContext) (float64, error) {
-	user, err := GetOrCreateUser(ctx.GetUserID(), ctx.GetUsername())
+	user, err := GetUser(ctx.GetUserID())
 	if err != nil {
 		logger.Error("Failed to get or create user", "error", err, "userID", ctx.GetUserID())
 		return 0, err
@@ -26,12 +27,13 @@ func GetBalance(ctx OperationContext) (float64, error) {
 
 // TransferMoney handles money transfer between users
 func TransferMoney(ctx OperationContext, toUsername string, amount float64) error {
-	fromUser, err := GetOrCreateUser(ctx.GetUserID(), ctx.GetUsername())
+	fromUser, err := GetUser(ctx.GetUserID())
 	if err != nil {
 		logger.Error("Failed to get or create sender", "error", err, "userID", ctx.GetUserID())
 		return err
 	}
 
+	toUsername = strings.TrimPrefix(toUsername, "@")
 	var toUser database.User
 	if err := database.DB.Where("username = ?", toUsername).First(&toUser).Error; err != nil {
 		logger.Error("Recipient not found", "error", err, "toUsername", toUsername)
