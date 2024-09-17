@@ -14,8 +14,8 @@ const (
 
 	// Info messages
 	InfoCurrentBalance     = "Your current balance is ¤%.2f ϣƛöƞȡρƐρøʋ"
-	InfoTransferSuccessful = "Successfully transferred ¤%.2f to %s"
-	InfoWelcome            = "Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is ¤%.2f.\n\nUse the button below to open the WebApp."
+	InfoTransferSuccessful = "Successfully transferred ¤%.2f to @%s"
+	InfoWelcome            = "Welcome to McDuck Wallet, @%s! Your personal finance assistant. Your current balance is ¤%.2f.\n\nUse the button below to open the WebApp."
 	InfoNoTransactions     = "No transactions found."
 	InfoRecentTransactions = "Your recent transactions:\n\n"
 
@@ -24,7 +24,7 @@ const (
 	UsageSet      = "Usage: /set <@username> <key=value>"
 
 	// Transaction descriptions
-	TransactionSent      = "Sent ¤%.2f to %s"
-	TransactionReceived  = "Received ¤%.2f from %s"
+	TransactionSent      = "Sent ¤%.2f to @%s"
+	TransactionReceived  = "Received ¤%.2f from @%s"
 	TransactionDeposited = "Deposited ¤%.2f"
 )

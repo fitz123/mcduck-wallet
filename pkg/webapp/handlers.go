@@ -21,12 +21,6 @@ func (wc *webContext) GetUserID() int64 {
 	return wc.userID
 }
 
-func (wc *webContext) GetUsername() string {
-	// In a web context, we might not always have the username readily available.
-	// You could fetch it from the database if needed, or return an empty string.
-	return ""
-}
-
 func ServeHTML(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "webapp/index.html")
 }
