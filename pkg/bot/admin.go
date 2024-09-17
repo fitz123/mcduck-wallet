@@ -9,6 +9,7 @@ import (
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
 	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -60,4 +61,48 @@ func HandleAdminSet(c tele.Context) error {
 	default:
 		return c.Send("Unknown key. Available keys: admin, balance")
 	}
+}
+
+func HandleAdminListUsers(c tele.Context) error {
+	if !core.IsAdmin(c.Sender().Username) {
+		logger.Warn("Unauthorized attempt to list users", "username", c.Sender().Username)
+		return c.Send("Unauthorized: This command is only available for admin accounts.")
+	}
+
+	users, err := core.ListUsersWithBalances()
+	if err != nil {
+		logger.Error("Failed to list users", "error", err)
+		return c.Send("An error occurred while fetching user data.")
+	}
+
+	response := "Users and their balances:\n\n"
+	for _, user := range users {
+		response += fmt.Sprintf("%d - @%s: ¤%.2f\n", user.TelegramID, user.Username, user.Balance)
+	}
+
+	logger.Info("Admin listed users", "adminUsername", c.Sender().Username)
+	return c.Send(response)
+}
+
+func HandleAdminRemoveUser(c tele.Context) error {
+	if !core.IsAdmin(c.Sender().Username) {
+		logger.Warn("Unauthorized attempt to remove user", "username", c.Sender().Username)
+		return c.Send("Unauthorized: This command is only available for admin accounts.")
+	}
+
+	args := c.Args()
+	if len(args) != 1 {
+		return c.Send("Usage: /removeuser <username>")
+	}
+
+	username := strings.TrimPrefix(args[0], "@") // Remove '@' if present
+
+	err := core.RemoveUser(username)
+	if err != nil {
+		logger.Error("Failed to remove user", "error", err, "username", username)
+		return c.Send(fmt.Sprintf("Failed to remove user: %v", err))
+	}
+
+	logger.Info("Admin removed user", "adminUsername", c.Sender().Username, "removedUsername", username)
+	return c.Send(fmt.Sprintf("User @%s has been successfully removed.", username))
 }

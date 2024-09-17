@@ -3,9 +3,11 @@
 package core
 
 import (
+	"errors"
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -53,4 +55,35 @@ func AdminSetBalance(adminID, targetUserID int64, amount float64) error {
 
 		return nil
 	})
+}
+
+func ListUsersWithBalances() ([]database.User, error) {
+	var users []database.User
+	err := database.DB.Select("telegram_id", "username", "balance").Find(&users).Error
+	if err != nil {
+		logger.Error("Failed to fetch users with balances", "error", err)
+		return nil, err
+	}
+	logger.Info("Listed users with balances", "userCount", len(users))
+	return users, nil
+}
+
+func RemoveUser(username string) error {
+	if username == "" {
+		return errors.New("username cannot be empty")
+	}
+
+	result := database.DB.Where("username = ?", username).Delete(&database.User{})
+	if result.Error != nil {
+		logger.Error("Failed to remove user", "error", result.Error, "username", username)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		logger.Warn("No user found to remove", "username", username)
+		return errors.New("user not found")
+	}
+
+	logger.Info("User removed", "username", username)
+	return nil
 }
