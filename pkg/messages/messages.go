@@ -13,7 +13,7 @@ const (
 	ErrCannotTransferToSelf = "Cannot transfer to self"
 
 	// Info messages
-	InfoCurrentBalance     = "Your current balance is ¤%.2f"
+	InfoCurrentBalance     = "Your current balance is ¤%.2f ϣƛöƞȡρƐρøʋ"
 	InfoTransferSuccessful = "Successfully transferred ¤%.2f to %s"
 	InfoWelcome            = "Welcome to McDuck Wallet, %s! Your personal finance assistant. Your current balance is ¤%.2f.\n\nUse the button below to open the WebApp."
 	InfoNoTransactions     = "No transactions found."
