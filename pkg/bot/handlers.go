@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
-	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	tele "gopkg.in/telebot.v3"
 )
@@ -29,12 +28,6 @@ func HandleStart(c tele.Context) error {
 	user, err := core.GetOrCreateUser(c.Sender().ID, c.Sender().Username)
 	if err != nil {
 		return c.Send("Error: " + err.Error())
-	}
-
-	if user.Username != c.Sender().Username {
-		// Update username if it has changed
-		user.Username = c.Sender().Username
-		database.DB.Save(user)
 	}
 
 	// Create a keyboard with a WebApp button

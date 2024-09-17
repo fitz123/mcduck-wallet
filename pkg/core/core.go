@@ -56,7 +56,7 @@ func GetOrCreateUser(telegramID int64, username string) (*database.User, error) 
 		}
 
 		// Update username if it has changed
-		if user.Username != username {
+		if user.Username != username && username != "" {
 			if err := database.DB.Model(&user).Update("username", username).Error; err != nil {
 				logger.Error("Failed to update username", "error", err, "telegramID", telegramID)
 				return nil, err
