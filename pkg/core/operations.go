@@ -16,7 +16,6 @@ type OperationContext interface {
 	GetUserID() int64
 }
 
-// GetBalance retrieves the balance for a user
 func GetBalance(ctx OperationContext) (float64, database.Currency, error) {
 	user, err := GetUser(ctx.GetUserID())
 	if err != nil {
@@ -24,14 +23,15 @@ func GetBalance(ctx OperationContext) (float64, database.Currency, error) {
 		return 0, database.Currency{}, err
 	}
 
-	var currency database.Currency
-	if err := database.DB.First(&currency, user.CurrencyID).Error; err != nil {
-		logger.Error("Failed to get currency", "error", err, "currencyID", user.CurrencyID)
-		return 0, database.Currency{}, err
-	}
+	logger.Debug("Retrieved balance",
+		"userID", ctx.GetUserID(),
+		"balance", user.Balance,
+		"currencyID", user.CurrencyID,
+		"currencyCode", user.Currency.Code,
+		"currencySign", user.Currency.Sign,
+		"currencyName", user.Currency.Name)
 
-	logger.Info("Retrieved balance", "userID", ctx.GetUserID(), "balance", user.Balance, "currency", currency.Code)
-	return user.Balance, currency, nil
+	return user.Balance, user.Currency, nil
 }
 
 // TransferMoney handles money transfer between users
@@ -82,12 +82,26 @@ func GetTransactionHistory(ctx OperationContext) ([]models.TransactionJSON, erro
 		return nil, err
 	}
 
+	defaultCurrency, err := database.GetDefaultCurrency()
+	if err != nil {
+		logger.Error("Failed to get default currency", "error", err)
+		return nil, err
+	}
+
 	transactionsJSON := make([]models.TransactionJSON, len(transactions))
 	for i, t := range transactions {
 		var currency database.Currency
-		if err := database.DB.First(&currency, t.CurrencyID).Error; err != nil {
-			logger.Error("Failed to get currency for transaction", "error", err, "transactionID", t.ID, "currencyID", t.CurrencyID)
-			return nil, err
+		if t.CurrencyID == 0 {
+			currency = defaultCurrency
+			// Update the transaction with the default currency
+			if err := database.DB.Model(&t).Update("currency_id", defaultCurrency.ID).Error; err != nil {
+				logger.Error("Failed to update transaction currency", "error", err, "transactionID", t.ID)
+			}
+		} else {
+			if err := database.DB.First(&currency, t.CurrencyID).Error; err != nil {
+				logger.Error("Failed to get currency for transaction", "error", err, "transactionID", t.ID, "currencyID", t.CurrencyID)
+				currency = defaultCurrency
+			}
 		}
 
 		transactionsJSON[i] = models.TransactionJSON{
