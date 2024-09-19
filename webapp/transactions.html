@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Transaction History</title>
+        <style>
+            /* Add your styles here */
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Transaction History</h2>
+            <div id="transaction-list">Loading transactions...</div>
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                // Retrieve Telegram Init Data from sessionStorage
+                const telegramInitParams = JSON.parse(
+                    sessionStorage.getItem("__telegram__initParams"),
+                );
+                const tgWebAppData = telegramInitParams
+                    ? telegramInitParams.tgWebAppData
+                    : null;
+
+                if (tgWebAppData) {
+                    console.log(
+                        "Sending fetch request with X-Telegram-Init-Data header",
+                    );
+                    fetch("/history", {
+                        method: "GET",
+                        headers: {
+                            "X-Telegram-Init-Data": tgWebAppData,
+                            Accept: "application/json",
+                        },
+                    })
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error("Network response was not OK");
+                            }
+                            return response.json();
+                        })
+                        .then((data) => {
+                            // Process the data and update the DOM
+                            const transactionList =
+                                document.getElementById("transaction-list");
+                            transactionList.innerHTML = data
+                                .map(
+                                    (t) =>
+                                        `<div class="transaction">${t}</div>`,
+                                )
+                                .join("");
+                        })
+                        .catch((error) => {
+                            document.getElementById(
+                                "transaction-list",
+                            ).innerText = "Failed to load transactions.";
+                        });
+                } else {
+                    document.getElementById("transaction-list").innerText =
+                        "Failed to load transactions: missing Telegram data.";
+                }
+            });
+        </script>
+    </body>
+</html>

@@ -193,14 +193,7 @@
                 </div>
             </div>
 
-            <div
-                class="transaction-history"
-                onclick="toggleHistory()"
-                hx-get="/history"
-                hx-target="#history-list"
-                hx-trigger="historyShow"
-                hx-swap="innerHTML"
-            >
+            <div class="transaction-history" onclick="openTransactionsPage()">
                 <span class="transaction-history-icon">≡</span>
                 Transaction history
             </div>
@@ -269,6 +262,10 @@
                         "historyShow",
                     );
                 }
+            }
+
+            function openTransactionsPage() {
+                window.location.href = "/transactions"; // Replace with the actual URL for the transactions page
             }
         </script>
     </body>
