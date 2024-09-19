@@ -18,6 +18,7 @@ var (
 	ErrUnauthorized         = errors.New(messages.ErrUnauthorized)
 	ErrNegativeAmount       = errors.New(messages.ErrNegativeAmount)
 	ErrCannotTransferToSelf = errors.New(messages.ErrCannotTransferToSelf)
+	ErrCurrencyMismatch     = errors.New(messages.ErrCurrencyMismatch)
 )
 
 func GetUser(telegramID int64) (*database.User, error) {
