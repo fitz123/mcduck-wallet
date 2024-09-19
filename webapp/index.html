@@ -35,6 +35,7 @@
                 padding: 20px;
                 background-color: var(--background-color);
                 color: var(--text-color);
+                visibility: hidden;
             }
 
             .container {
@@ -192,79 +193,192 @@
                     margin-bottom: 0;
                 }
             }
+
+            #loading-screen {
+                visibility: visible;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: var(--background-color);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+
+            .spinner {
+                width: 50px;
+                height: 50px;
+                border: 5px solid var(--primary-color);
+                border-top: 5px solid var(--background-color);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            #main-content {
+                display: none;
+            }
+
+            #debug-info {
+                display: none;
+                position: fixed;
+                bottom: 10px;
+                left: 10px;
+                background-color: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 10px;
+                font-size: 12px;
+                z-index: 10000;
+            }
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="balance-section">
-                <div class="total-balance">Total Balance</div>
-                <div class="balance-wrapper">
-                    <div class="balance-amount">
-                        <span id="currency-sign" class="currency-sign"></span>
-                        <span
-                            id="balance-value"
-                            hx-get="/balance"
-                            hx-trigger="balanceLoad from:body"
-                            >Loading...</span
-                        >
-                    </div>
-                    <span id="currency-name" class="currency-name"></span>
-                </div>
-                <button class="send-btn" onclick="toggleTransferForm()">
-                    Transfer
-                </button>
-                <div class="transfer-form" id="transfer-form">
-                    <input
-                        type="text"
-                        name="to_username"
-                        placeholder="Recipient's username"
-                        class="input"
-                        required
-                    />
-                    <input
-                        type="number"
-                        name="amount"
-                        placeholder="Amount"
-                        class="input"
-                        required
-                        step="any"
-                    />
-                    <button
-                        class="send-btn"
-                        hx-post="/transfer"
-                        hx-target="#transfer-result"
-                        hx-include="closest .transfer-form"
-                    >
-                        Send
-                    </button>
-                    <div id="transfer-result"></div>
-                </div>
-
-                <div class="playstation">
-                    <div class="playstation-icon">🎮</div>
-                    <div class="playstation-text">Playstation 5</div>
-                    <div id="playstation-amount" class="playstation-amount">
-                        Loading...
-                    </div>
-                </div>
-            </div>
-
-            <div class="transaction-history" onclick="openTransactionsPage()">
-                <span class="transaction-history-icon">📄</span>
-                Transaction History
-            </div>
-            <div id="history-list" class="history-dropdown"></div>
+        <div id="loading-screen">
+            <div class="spinner"></div>
         </div>
+
+        <div id="main-content">
+            <div class="container">
+                <div class="balance-section">
+                    <div class="total-balance">Total Balance</div>
+                    <div class="balance-wrapper">
+                        <div class="balance-amount">
+                            <span
+                                id="currency-sign"
+                                class="currency-sign"
+                            ></span>
+                            <span
+                                id="balance-value"
+                                hx-get="/balance"
+                                hx-trigger="balanceLoad from:body"
+                                >Loading...</span
+                            >
+                        </div>
+                        <span id="currency-name" class="currency-name"></span>
+                    </div>
+                    <button class="send-btn" onclick="toggleTransferForm()">
+                        Transfer
+                    </button>
+                    <div class="transfer-form" id="transfer-form">
+                        <input
+                            type="text"
+                            name="to_username"
+                            placeholder="Recipient's username"
+                            class="input"
+                            required
+                        />
+                        <input
+                            type="number"
+                            name="amount"
+                            placeholder="Amount"
+                            class="input"
+                            required
+                            step="any"
+                        />
+                        <button
+                            class="send-btn"
+                            hx-post="/transfer"
+                            hx-target="#transfer-result"
+                            hx-include="closest .transfer-form"
+                        >
+                            Send
+                        </button>
+                        <div id="transfer-result"></div>
+                    </div>
+
+                    <div class="playstation">
+                        <div class="playstation-icon">🎮</div>
+                        <div class="playstation-text">Playstation 5</div>
+                        <div id="playstation-amount" class="playstation-amount">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="transaction-history"
+                    onclick="openTransactionsPage()"
+                >
+                    <span class="transaction-history-icon">📄</span>
+                    Transaction History
+                </div>
+                <div id="history-list" class="history-dropdown"></div>
+            </div>
+        </div>
+
+        <div id="debug-info"></div>
 
         <script>
             let tg = window.Telegram.WebApp;
             tg.expand();
 
+            let contentLoaded = false;
+            const MAX_WAIT_TIME = 5000; // 5 seconds maximum wait time
+
+            function debugLog(message) {
+                console.log(message);
+                document.getElementById("debug-info").innerHTML +=
+                    message + "<br>";
+            }
+
+            function showContent() {
+                if (contentLoaded) return;
+                contentLoaded = true;
+                debugLog("Showing content");
+                document.getElementById("loading-screen").style.display =
+                    "none";
+                document.getElementById("main-content").style.display = "block";
+                document.body.style.visibility = "visible";
+            }
+
+            function preRenderContent(data) {
+                try {
+                    let response = JSON.parse(data);
+                    document.getElementById("currency-sign").innerText =
+                        response.sign;
+                    document.getElementById("balance-value").innerText =
+                        response.value.toFixed(2);
+                    document.getElementById("currency-name").innerText =
+                        response.currency;
+                    document.getElementById("playstation-amount").innerText =
+                        `${response.sign}${response.value.toFixed(2)}`;
+                    debugLog("Content pre-rendered successfully");
+                } catch (error) {
+                    debugLog("Error pre-rendering content: " + error);
+                }
+            }
+
+            // Failsafe: Show content after MAX_WAIT_TIME
+            setTimeout(() => {
+                debugLog("Max wait time reached");
+                showContent();
+            }, MAX_WAIT_TIME);
+
             htmx.on("htmx:configRequest", (event) => {
+                debugLog("Configuring request");
                 event.detail.headers["X-Telegram-Init-Data"] = tg.initData;
             });
 
+            htmx.on("htmx:beforeRequest", (evt) => {
+                debugLog("Before request: " + evt.detail.pathInfo.requestPath);
+            });
+
             htmx.on("htmx:afterRequest", (evt) => {
+                debugLog("After request: " + evt.detail.pathInfo.requestPath);
+                if (evt.detail.successful) {
+                    preRenderContent(evt.detail.xhr.responseText);
+                }
                 if (evt.detail.target.id === "transfer-result") {
                     let response = evt.detail.xhr.responseText;
                     let isError =
@@ -275,24 +389,45 @@
             });
 
             htmx.on("htmx:afterSettle", (evt) => {
+                debugLog("After settle: " + evt.detail.target.id);
                 if (evt.detail.target.id === "balance-value") {
-                    let response = JSON.parse(evt.detail.xhr.responseText);
-                    document.getElementById("currency-sign").innerText =
-                        response.sign;
-                    evt.detail.target.innerText = response.value.toFixed(2);
-                    document.getElementById("currency-name").innerText =
-                        response.currency;
-                    document.getElementById("playstation-amount").innerText =
-                        `${response.sign}${response.value.toFixed(2)}`;
+                    showContent();
+                    try {
+                        let response = JSON.parse(evt.detail.xhr.responseText);
+                        document.getElementById("currency-sign").innerText =
+                            response.sign;
+                        evt.detail.target.innerText = response.value.toFixed(2);
+                        document.getElementById("currency-name").innerText =
+                            response.currency;
+                        document.getElementById(
+                            "playstation-amount",
+                        ).innerText =
+                            `${response.sign}${response.value.toFixed(2)}`;
+                        showContent(); // Show content after balance is loaded
+                    } catch (error) {
+                        debugLog("Error parsing balance: " + error);
+                        showContent();
+                    }
                 } else if (evt.detail.target.id === "history-list") {
-                    let transactions = JSON.parse(evt.detail.xhr.response);
-                    evt.detail.target.innerHTML = transactions
-                        .map((t) => `<div class="transaction">${t}</div>`)
-                        .join("");
+                    try {
+                        let transactions = JSON.parse(evt.detail.xhr.response);
+                        evt.detail.target.innerHTML = transactions
+                            .map((t) => `<div class="transaction">${t}</div>`)
+                            .join("");
+                    } catch (error) {
+                        debugLog("Error parsing history: " + error);
+                    }
                 }
             });
 
             htmx.on("htmx:load", () => {
+                debugLog("HTMX load event");
+                htmx.trigger(document.body, "balanceLoad");
+            });
+
+            // Trigger initial load
+            document.addEventListener("DOMContentLoaded", () => {
+                debugLog("DOM content loaded");
                 htmx.trigger(document.body, "balanceLoad");
             });
 
