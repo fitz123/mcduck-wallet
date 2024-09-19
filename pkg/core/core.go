@@ -23,27 +23,64 @@ var (
 
 func GetUser(telegramID int64) (*database.User, error) {
 	var user database.User
-	result := database.DB.Where("telegram_id = ?", telegramID).First(&user)
+	result := database.DB.Preload("Currency").Where("telegram_id = ?", telegramID).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
 		}
+		logger.Error("Failed to get user", "error", result.Error, "telegramID", telegramID)
 		return nil, result.Error
 	}
+
+	if user.CurrencyID == 0 || user.Currency.ID == 0 {
+		defaultCurrency, err := database.GetDefaultCurrency()
+		if err != nil {
+			logger.Error("Failed to get default currency", "error", err)
+			return nil, err
+		}
+
+		user.CurrencyID = defaultCurrency.ID
+		user.Currency = defaultCurrency
+
+		// Update the user in the database
+		if err := database.DB.Model(&user).Update("currency_id", defaultCurrency.ID).Error; err != nil {
+			logger.Error("Failed to update user currency", "error", err, "telegramID", telegramID)
+		}
+
+		logger.Info("Updated user with default currency", "telegramID", telegramID, "currencyID", defaultCurrency.ID)
+	}
+
+	logger.Debug("User fetched",
+		"telegramID", user.TelegramID,
+		"username", user.Username,
+		"balance", user.Balance,
+		"currencyID", user.CurrencyID,
+		"currencyCode", user.Currency.Code,
+		"currencySign", user.Currency.Sign)
+
 	return &user, nil
 }
 
 func CreateUser(telegramID int64, username string) (*database.User, error) {
+	var defaultCurrency database.Currency
+	if err := database.DB.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
+		logger.Error("Failed to get default currency", "error", err)
+		return nil, err
+	}
+
 	user := database.User{
 		TelegramID: telegramID,
 		Username:   username,
 		Balance:    0,
+		CurrencyID: defaultCurrency.ID,
 	}
+
 	if err := database.DB.Create(&user).Error; err != nil {
 		logger.Error("Failed to create new user", "error", err, "telegramID", telegramID)
 		return nil, err
 	}
-	logger.Info("New user created", "telegramID", telegramID, "username", username)
+
+	logger.Info("New user created", "telegramID", telegramID, "username", username, "currencyID", user.CurrencyID)
 	return &user, nil
 }
 

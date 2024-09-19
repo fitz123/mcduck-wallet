@@ -57,15 +57,49 @@ func AdminSetBalance(adminID, targetUserID int64, amount float64) error {
 	})
 }
 
-func ListUsersWithBalances() ([]database.User, error) {
+type UserWithBalance struct {
+	TelegramID   int64
+	Username     string
+	Balance      float64
+	CurrencySign string
+	CurrencyName string
+}
+
+func ListUsersWithBalances() ([]UserWithBalance, error) {
 	var users []database.User
-	err := database.DB.Select("telegram_id", "username", "balance").Find(&users).Error
+	err := database.DB.Find(&users).Error
 	if err != nil {
-		logger.Error("Failed to fetch users with balances", "error", err)
+		logger.Error("Failed to fetch users", "error", err)
 		return nil, err
 	}
-	logger.Info("Listed users with balances", "userCount", len(users))
-	return users, nil
+
+	usersWithBalances := make([]UserWithBalance, 0, len(users))
+	for _, user := range users {
+		// Use GetUser to ensure Currency is loaded
+		fullUser, err := GetUser(user.TelegramID)
+		if err != nil {
+			logger.Error("Failed to get full user data", "error", err, "telegramID", user.TelegramID)
+			continue
+		}
+
+		usersWithBalances = append(usersWithBalances, UserWithBalance{
+			TelegramID:   fullUser.TelegramID,
+			Username:     fullUser.Username,
+			Balance:      fullUser.Balance,
+			CurrencySign: fullUser.Currency.Sign,
+			CurrencyName: fullUser.Currency.Name,
+		})
+
+		logger.Debug("User currency details",
+			"userID", fullUser.ID,
+			"telegramID", fullUser.TelegramID,
+			"currencyID", fullUser.CurrencyID,
+			"currencySign", fullUser.Currency.Sign,
+			"currencyName", fullUser.Currency.Name)
+	}
+
+	logger.Info("Listed users with balances", "userCount", len(usersWithBalances))
+	return usersWithBalances, nil
 }
 
 func RemoveUser(username string) error {

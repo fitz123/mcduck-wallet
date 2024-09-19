@@ -75,12 +75,28 @@ func HandleAdminListUsers(c tele.Context) error {
 		return c.Send("An error occurred while fetching user data.")
 	}
 
+	logger.Debug("Retrieved users with balances", "count", len(users))
+
 	response := "Users and their balances:\n\n"
 	for _, user := range users {
-		response += fmt.Sprintf("%d - @%s: ¤%.2f\n", user.TelegramID, user.Username, user.Balance)
+		userLine := fmt.Sprintf("%d - @%s: %s%.2f\n",
+			user.TelegramID,
+			user.Username,
+			user.CurrencySign,
+			user.Balance,
+		)
+
+		logger.Debug("Formatting user balance",
+			"telegramID", user.TelegramID,
+			"username", user.Username,
+			"currency.Sign", user.CurrencySign,
+			"balance", user.Balance,
+		)
+
+		response += userLine
 	}
 
-	logger.Info("Admin listed users", "adminUsername", c.Sender().Username)
+	logger.Info("Admin listed users", "adminUsername", c.Sender().Username, "responseLength", len(response))
 	return c.Send(response)
 }
 

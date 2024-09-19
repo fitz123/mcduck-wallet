@@ -54,7 +54,10 @@ func InitDB() {
 		logger.Error("Failed to migrate database:", err)
 	}
 
-	// Create default currency if it doesn't exist
+	EnsureDefaultCurrency()
+}
+
+func EnsureDefaultCurrency() {
 	var defaultCurrency Currency
 	if err := DB.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -64,11 +67,16 @@ func InitDB() {
 				Sign:      "¤",
 				IsDefault: true,
 			}
-			DB.Create(&defaultCurrency)
-			logger.Info("Created default currency")
+			if err := DB.Create(&defaultCurrency).Error; err != nil {
+				logger.Error("Failed to create default currency:", err)
+			} else {
+				logger.Info("Created default currency", "id", defaultCurrency.ID)
+			}
 		} else {
 			logger.Error("Error checking for default currency:", err)
 		}
+	} else {
+		logger.Info("Default currency exists", "id", defaultCurrency.ID)
 	}
 }
 
