@@ -1,102 +1,275 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>McDuck Wallet WebApp</title>
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #1f1f1f;
-            color: #BBBAAF;
-        }
-        .container { max-width: 600px; margin: 0 auto; }
-        .button {
-            background-color: #f5d865;
-            color: #000000;
-            border: none;
-            padding: 10px 15px;
-            margin: 5px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .input {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid var(--tg-theme-hint-color, #999999);
-            border-radius: 5px;
-        }
-        .message {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
-        }
-        .success { color: #008000; background-color: #e6ffe6; border: 1px solid #008000; }
-        .error { color: #ff0000; background-color: #ffeeee; border: 1px solid #ff0000; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>McDuck Wallet</h1>
-        
-        <div id="balance">
-            <button class="button" hx-get="/balance" hx-target="#balance-amount">Check Balance</button>
-            <div id="balance-amount"></div>
-        </div>
-        
-        <div id="transfer">
-            <h2>Transfer Money</h2>
-            <form hx-post="/transfer" hx-target="#transfer-result">
-                <input type="text" name="to_username" placeholder="Recipient's username" class="input" required>
-                <input type="number" name="amount" placeholder="Amount" class="input" required>
-                <button type="submit" class="button">Transfer</button>
-            </form>
-            <div id="transfer-result"></div>
-        </div>
-        
-        <div id="history">
-            <h2>Transaction History</h2>
-            <button class="button" hx-get="/history" hx-target="#history-list">Load History</button>
-            <div id="history-list"></div>
-        </div>
-    </div>
-
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.MainButton.setText("Close Wallet").show().onClick(() => tg.close());
-
-        htmx.on('htmx:configRequest', (event) => {
-            event.detail.headers['X-Telegram-Init-Data'] = tg.initData;
-        });
-
-        htmx.on('htmx:load', () => htmx.trigger("#balance button", "click"));
-
-        htmx.on('htmx:afterRequest', (evt) => {
-            if (evt.detail.target.id === 'transfer-result') {
-                let response = evt.detail.xhr.responseText;
-                let isError = evt.detail.failed || evt.detail.xhr.status !== 200;
-                let messageClass = isError ? 'error' : 'success';
-                let messagePrefix = isError ? 'Transfer failed: ' : '';
-                evt.detail.target.innerHTML = `<div class="message ${messageClass}">${messagePrefix}${response}</div>`;
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>McDuck Wallet WebApp</title>
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10"></script>
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
+                    "Helvetica Neue", sans-serif;
+                margin: 0;
+                padding: 20px;
+                background-color: #ffffff;
+                color: #000000;
             }
-        });
 
-        htmx.on('htmx:afterSettle', (evt) => {
-          if (evt.detail.target.id === 'balance-amount') {
-                evt.detail.target.innerText = evt.detail.xhr.responseText;
-            } else if (evt.detail.target.id === 'history-list') {
-                let transactions = JSON.parse(evt.detail.xhr.response);
-                evt.detail.target.innerHTML = transactions.map(t => 
-                    `<div class="transaction">${t}</div>`
-                ).join('');
+            .balance-section {
+                background-color: #ffffff;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                text-align: center;
             }
-        });
-    </script>
-</body>
+            .total-balance {
+                font-size: 14px;
+                color: #888;
+                margin-bottom: 5px;
+            }
+
+            .balance-amount {
+                font-size: 32px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+            .currency-sign {
+                color: #888;
+            }
+            .currency-name {
+                font-size: 14px;
+                color: #888;
+            }
+            .send-btn {
+                background-color: #4c8bf5;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 20px;
+                font-size: 16px;
+                cursor: pointer;
+                margin-top: 15px;
+            }
+            .playstation {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 15px 0;
+                border-top: 1px solid #eee;
+                margin-top: 15px;
+            }
+            .playstation-icon {
+                background-color: #7b68ee;
+                color: white;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 20px;
+                margin-right: 5px;
+            }
+            .playstation-text {
+                margin-right: auto;
+            }
+            .playstation-amount {
+                font-weight: bold;
+            }
+            .transaction-history {
+                background-color: #f0f0f0;
+                border-radius: 10px;
+                padding: 15px;
+                display: flex;
+                align-items: center;
+                cursor: pointer;
+                margin-bottom: 10px;
+            }
+            .transaction-history-icon {
+                margin-right: 10px;
+                font-size: 20px;
+            }
+            .transfer-form {
+                display: none;
+                margin-top: 20px;
+            }
+            .input {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            .message {
+                padding: 10px;
+                margin: 10px 0;
+                border-radius: 5px;
+            }
+            .success {
+                color: #008000;
+                background-color: #e6ffe6;
+                border: 1px solid #008000;
+            }
+            .error {
+                color: #ff0000;
+                background-color: #ffeeee;
+                border: 1px solid #ff0000;
+            }
+            .history-dropdown {
+                display: none;
+                background-color: #f9f9f9;
+                border-radius: 0 0 10px 10px;
+                padding: 15px;
+                margin-top: -10px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+            .history-dropdown.show {
+                display: block;
+            }
+            .transaction {
+                padding: 10px 0;
+                border-bottom: 1px solid #eee;
+            }
+            .transaction:last-child {
+                border-bottom: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="balance-section">
+                <div class="total-balance">Total balance</div>
+                <div class="balance-wrapper">
+                    <div class="balance-amount">
+                        <span id="currency-sign" class="currency-sign"></span>
+                        <span
+                            id="balance-value"
+                            hx-get="/balance"
+                            hx-trigger="balanceLoad from:body"
+                            >Loading...</span
+                        >
+                    </div>
+                    <span id="currency-name" class="currency-name"></span>
+                </div>
+                <button class="send-btn" onclick="toggleTransferForm()">
+                    Transfer
+                </button>
+                <div class="transfer-form" id="transfer-form">
+                    <input
+                        type="text"
+                        name="to_username"
+                        placeholder="Recipient's username"
+                        class="input"
+                        required
+                    />
+                    <input
+                        type="number"
+                        name="amount"
+                        placeholder="Amount"
+                        class="input"
+                        required
+                        step="any"
+                    />
+                    <button
+                        class="send-btn"
+                        hx-post="/transfer"
+                        hx-target="#transfer-result"
+                        hx-include="closest .transfer-form"
+                    >
+                        Send
+                    </button>
+                </div>
+                <div id="transfer-result"></div>
+
+                <div class="playstation">
+                    <div class="playstation-icon">🎮</div>
+                    <div class="playstation-text">Playstation 5</div>
+                    <div id="playstation-amount" class="playstation-amount">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="transaction-history"
+                onclick="toggleHistory()"
+                hx-get="/history"
+                hx-target="#history-list"
+                hx-trigger="historyShow"
+                hx-swap="innerHTML"
+            >
+                <span class="transaction-history-icon">≡</span>
+                Transaction history
+            </div>
+            <div id="history-list" class="history-dropdown"></div>
+        </div>
+
+        <script>
+            let tg = window.Telegram.WebApp;
+            tg.expand();
+
+            htmx.on("htmx:configRequest", (event) => {
+                event.detail.headers["X-Telegram-Init-Data"] = tg.initData;
+            });
+
+            htmx.on("htmx:afterRequest", (evt) => {
+                if (evt.detail.target.id === "transfer-result") {
+                    let response = evt.detail.xhr.responseText;
+                    let isError =
+                        evt.detail.failed || evt.detail.xhr.status !== 200;
+                    let messageClass = isError ? "error" : "success";
+                    evt.detail.target.innerHTML = `<div class="message ${messageClass}">${response}</div>`;
+                }
+            });
+
+            htmx.on("htmx:afterSettle", (evt) => {
+                if (evt.detail.target.id === "balance-value") {
+                    let response = JSON.parse(evt.detail.xhr.responseText);
+                    document.getElementById("currency-sign").innerText =
+                        response.sign;
+                    evt.detail.target.innerText = response.value.toFixed(2);
+                    document.getElementById("currency-name").innerText =
+                        response.currency;
+                    document.getElementById("playstation-amount").innerText =
+                        `${response.sign}${response.value.toFixed(2)}`;
+                } else if (evt.detail.target.id === "history-list") {
+                    let transactions = JSON.parse(evt.detail.xhr.response);
+                    evt.detail.target.innerHTML = transactions
+                        .map((t) => `<div class="transaction">${t}</div>`)
+                        .join("");
+                }
+            });
+
+            htmx.on("htmx:load", () => {
+                htmx.trigger(document.body, "balanceLoad");
+            });
+
+            function toggleTransferForm() {
+                const form = document.getElementById("transfer-form");
+                form.style.display =
+                    form.style.display === "none" || form.style.display === ""
+                        ? "block"
+                        : "none";
+            }
+
+            function toggleHistory() {
+                const historyList = document.getElementById("history-list");
+
+                if (historyList.classList.contains("show")) {
+                    historyList.classList.remove("show");
+                    historyList.innerHTML = ""; // Clear the history when hiding
+                } else {
+                    historyList.classList.add("show");
+                    // Manually trigger history load if not loaded
+                    htmx.trigger(
+                        document.querySelector(".transaction-history"),
+                        "historyShow",
+                    );
+                }
+            }
+        </script>
+    </body>
 </html>
