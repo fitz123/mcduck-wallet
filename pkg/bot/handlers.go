@@ -46,7 +46,7 @@ func HandleStart(c tele.Context) error {
 	}
 
 	// Create a keyboard with a WebApp button
-	webAppURL := "https://3a64-181-111-49-211.ngrok-free.app"
+	webAppURL := "https://mcduck.120912.xyz"
 	webAppButton := tele.InlineButton{
 		Text: "Open McDuck Wallet",
 		WebApp: &tele.WebApp{

@@ -59,7 +59,7 @@ func main() {
 
 	// Create a new server
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":80",
 		Handler: mux,
 	}
 
@@ -78,7 +78,7 @@ func main() {
 
 	// Start the HTTP server in a separate goroutine
 	go func() {
-		logger.Info("Starting WebApp server on :8080")
+		logger.Info("Starting WebApp server on :80")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("WebApp server error", "error", err)
 		}
