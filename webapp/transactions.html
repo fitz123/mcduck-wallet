@@ -1,45 +1,112 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <!-- Meta tags and title -->
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Transaction History</title>
+        <!-- Google Fonts -->
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
+        <!-- Telegram Web App JS SDK -->
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        <!-- Styles -->
         <style>
+            /* Root variables for colors and fonts */
+            :root {
+                --primary-color: #4a90e2;
+                --background-color: #f5f7fa;
+                --card-background: #ffffff;
+                --text-color: #333333;
+                --text-muted-color: #777777;
+                --success-color: #27ae60;
+                --error-color: #e74c3c;
+                --border-radius: 8px;
+                --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                --font-family: "Roboto", sans-serif;
+            }
+
             body {
-                font-family: Arial, sans-serif;
+                font-family: var(--font-family);
+                margin: 0;
+                padding: 20px;
+                background-color: var(--background-color);
+                color: var(--text-color);
+            }
+
+            .container {
                 max-width: 600px;
                 margin: 0 auto;
-                padding: 20px;
             }
+
+            h2 {
+                color: var(--primary-color);
+                text-align: center;
+                margin-bottom: 20px;
+                font-size: 24px;
+            }
+
             .transaction {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 1px solid #eee;
-                padding: 10px 0;
+                background-color: var(--card-background);
+                border-radius: var(--border-radius);
+                padding: 20px;
+                margin-bottom: 15px;
+                box-shadow: var(--box-shadow);
+                transition:
+                    transform 0.2s ease,
+                    box-shadow 0.2s ease;
             }
-            .transaction:last-child {
-                border-bottom: none;
+
+            .transaction:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
             }
+
             .left-content {
                 display: flex;
                 flex-direction: column;
             }
+
             .description {
-                font-weight: bold;
+                font-weight: 500;
+                color: var(--text-color);
+                font-size: 16px;
+                margin-bottom: 5px;
             }
+
             .timestamp {
-                color: #888;
-                font-size: 0.9em;
+                color: var(--text-muted-color);
+                font-size: 14px;
             }
+
             .amount {
-                font-weight: bold;
+                font-weight: 500;
+                font-size: 18px;
             }
+
             .received {
-                color: green;
+                color: var(--success-color);
             }
+
             .sent {
-                color: red;
+                color: var(--error-color);
+            }
+
+            /* Responsive Design */
+            @media (max-width: 600px) {
+                .transaction {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+
+                .amount {
+                    margin-top: 10px;
+                }
             }
         </style>
     </head>
@@ -109,22 +176,22 @@
                                     }
 
                                     return `
-                        <div class="transaction">
-                            <div class="left-content">
-                                <div class="description">${description}</div>
-                                <div class="timestamp">${new Date(
-                                    t.timestamp,
-                                ).toLocaleString("default", {
-                                    day: "numeric",
-                                    month: "long",
-                                    hour: "numeric",
-                                    minute: "numeric",
-                                    hour12: true,
-                                })}</div>
-                            </div>
-                            <div class="amount ${amountClass}">${t.currency.sign}${amount} ${amountClass === "received" ? "Received" : "Sent"}</div>
+                    <div class="transaction">
+                        <div class="left-content">
+                            <div class="description">${description}</div>
+                            <div class="timestamp">${new Date(
+                                t.timestamp,
+                            ).toLocaleString("default", {
+                                day: "numeric",
+                                month: "long",
+                                hour: "numeric",
+                                minute: "numeric",
+                                hour12: true,
+                            })}</div>
                         </div>
-                    `;
+                        <div class="amount ${amountClass}">${t.currency.Sign}${amount} ${amountClass === "received" ? "Received" : "Sent"}</div>
+                    </div>
+                `;
                                 })
                                 .join("");
                         })
