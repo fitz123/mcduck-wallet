@@ -3,8 +3,44 @@
     <head>
         <meta charset="UTF-8" />
         <title>Transaction History</title>
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <style>
-            /* Add your styles here */
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .transaction {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #eee;
+                padding: 10px 0;
+            }
+            .transaction:last-child {
+                border-bottom: none;
+            }
+            .left-content {
+                display: flex;
+                flex-direction: column;
+            }
+            .description {
+                font-weight: bold;
+            }
+            .timestamp {
+                color: #888;
+                font-size: 0.9em;
+            }
+            .amount {
+                font-weight: bold;
+            }
+            .received {
+                color: green;
+            }
+            .sent {
+                color: red;
+            }
         </style>
     </head>
     <body>
@@ -14,6 +50,14 @@
         </div>
 
         <script>
+            let tg = window.Telegram.WebApp;
+
+            // Initialize the back button
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => {
+                window.location.href = "/"; // Navigate back to the main page
+            });
+
             document.addEventListener("DOMContentLoaded", function () {
                 // Retrieve Telegram Init Data from sessionStorage
                 const telegramInitParams = JSON.parse(
@@ -45,10 +89,43 @@
                             const transactionList =
                                 document.getElementById("transaction-list");
                             transactionList.innerHTML = data
-                                .map(
-                                    (t) =>
-                                        `<div class="transaction">${t}</div>`,
-                                )
+                                .map((t) => {
+                                    let description;
+                                    let amountClass;
+                                    let amount = Math.abs(t.amount).toFixed(2);
+
+                                    if (t.type === "transfer") {
+                                        if (t.amount < 0) {
+                                            description = `To ${truncateUsername(t.to_username)}`;
+                                            amountClass = "sent";
+                                        } else {
+                                            description = `From ${truncateUsername(t.to_username)}`;
+                                            amountClass = "received";
+                                        }
+                                    } else {
+                                        description = `System Transaction`;
+                                        amountClass =
+                                            t.amount >= 0 ? "received" : "sent";
+                                    }
+
+                                    return `
+                        <div class="transaction">
+                            <div class="left-content">
+                                <div class="description">${description}</div>
+                                <div class="timestamp">${new Date(
+                                    t.timestamp,
+                                ).toLocaleString("default", {
+                                    day: "numeric",
+                                    month: "long",
+                                    hour: "numeric",
+                                    minute: "numeric",
+                                    hour12: true,
+                                })}</div>
+                            </div>
+                            <div class="amount ${amountClass}">${t.currency.sign}${amount} ${amountClass === "received" ? "Received" : "Sent"}</div>
+                        </div>
+                    `;
+                                })
                                 .join("");
                         })
                         .catch((error) => {
@@ -59,6 +136,14 @@
                 } else {
                     document.getElementById("transaction-list").innerText =
                         "Failed to load transactions: missing Telegram data.";
+                }
+
+                function truncateUsername(username) {
+                    const maxLength = 18;
+                    if (username.length > maxLength) {
+                        return username.substring(0, maxLength - 3) + "...";
+                    }
+                    return username;
                 }
             });
         </script>

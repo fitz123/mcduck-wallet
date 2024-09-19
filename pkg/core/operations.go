@@ -7,6 +7,7 @@ import (
 
 	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/logger"
+	"github.com/fitz123/mcduck-wallet/pkg/models"
 )
 
 // OperationContext represents the context in which an operation is executed
@@ -51,12 +52,27 @@ func TransferMoney(ctx OperationContext, toUsername string, amount float64) erro
 }
 
 // GetTransactionHistory retrieves the transaction history for a user
-func GetTransactionHistory(ctx OperationContext) ([]database.Transaction, error) {
+func GetTransactionHistory(ctx OperationContext) ([]models.TransactionJSON, error) {
 	transactions, err := getTransactionHistory(ctx.GetUserID())
 	if err != nil {
 		logger.Error("Failed to get transaction history", "error", err, "userID", ctx.GetUserID())
 		return nil, err
 	}
-	logger.Info("Retrieved transaction history", "userID", ctx.GetUserID(), "transactionCount", len(transactions))
-	return transactions, nil
+
+	currency := database.GetDefaultCurrency()
+	transactionsJSON := make([]models.TransactionJSON, len(transactions))
+	for i, t := range transactions {
+		transactionsJSON[i] = models.TransactionJSON{
+			ID:         t.ID,
+			Amount:     t.Amount,
+			Type:       t.Type,
+			ToUserID:   t.ToUserID,
+			ToUsername: t.ToUsername,
+			Timestamp:  t.Timestamp,
+			Currency:   currency,
+		}
+	}
+
+	logger.Info("Retrieved transaction history", "userID", ctx.GetUserID(), "transactionCount", len(transactionsJSON))
+	return transactionsJSON, nil
 }

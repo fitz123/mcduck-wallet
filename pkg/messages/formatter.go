@@ -5,11 +5,11 @@ package messages
 import (
 	"fmt"
 
-	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/models"
 )
 
-// FormatTransactionHistory formats the transaction history for both bot and webapp responses
-func FormatTransactionHistory(transactions []database.Transaction) []string {
+// FormatTransactionHistory formats the transaction history for bot
+func FormatTransactionHistory(transactions []models.TransactionJSON) []string {
 	if len(transactions) == 0 {
 		return []string{InfoNoTransactions}
 	}
@@ -18,18 +18,39 @@ func FormatTransactionHistory(transactions []database.Transaction) []string {
 
 	for i, t := range transactions {
 		var description string
+
 		if t.Type == "transfer" {
 			if t.Amount < 0 {
-				description = fmt.Sprintf(TransactionSent, -t.Amount, t.ToUsername)
+				description = fmt.Sprintf("Send to *%s*", truncateUsername(t.ToUsername))
 			} else {
-				description = fmt.Sprintf(TransactionReceived, t.Amount, t.ToUsername)
+				description = fmt.Sprintf("Received from *%s*", truncateUsername(t.ToUsername))
 			}
 		} else {
-			description = fmt.Sprintf(TransactionDeposited, t.Amount)
+			description = "System Transaction"
 		}
 
-		formattedTransactions[i] = fmt.Sprintf("%s - %s", t.Timestamp.Format("2006-01-02 15:04:05"), description)
+		formattedTransactions[i] = fmt.Sprintf("%s - %s %s%.2f",
+			t.Timestamp.Format("2006-01-02 15:04:05"),
+			description,
+			t.Currency.Sign, abs(t.Amount))
 	}
 
 	return formattedTransactions
+}
+
+// abs returns the absolute value of x
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+// truncateUsername shortens long usernames and adds an ellipsis
+func truncateUsername(username string) string {
+	maxLength := 18
+	if len(username) > maxLength {
+		return username[:maxLength-3] + "..."
+	}
+	return username
 }

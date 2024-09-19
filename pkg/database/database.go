@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -32,6 +33,15 @@ func InitDB() {
 		}
 		DB.Create(&defaultCurrency)
 	}
+}
+
+func GetDefaultCurrency() Currency {
+	// Fetch the default currency
+	var defaultCurrency Currency
+	if err := DB.First(&defaultCurrency).Error; err != nil {
+		logger.Error("Error fetching currency information")
+	}
+	return defaultCurrency
 }
 
 type Currency struct {
