@@ -76,7 +76,7 @@ func EnsureDefaultCurrency() {
 			logger.Error("Error checking for default currency:", err)
 		}
 	} else {
-		logger.Info("Default currency exists", "id", defaultCurrency.ID)
+		logger.Debug("Default currency exists", "id", defaultCurrency.ID)
 	}
 }
 
