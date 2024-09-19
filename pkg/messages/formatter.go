@@ -32,7 +32,8 @@ func FormatTransactionHistory(transactions []models.TransactionJSON) []string {
 		formattedTransactions[i] = fmt.Sprintf("%s - %s %s%.2f",
 			t.Timestamp.Format("2006-01-02 15:04:05"),
 			description,
-			t.Currency.Sign, abs(t.Amount))
+			t.CurrencySign, abs(t.Amount),
+		)
 	}
 
 	return formattedTransactions

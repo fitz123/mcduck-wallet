@@ -11,6 +11,7 @@ const (
 	ErrRecipientNotFound    = "Recipient not found."
 	ErrNegativeAmount       = "Transfer amount must be positive"
 	ErrCannotTransferToSelf = "Cannot transfer to self"
+	ErrCurrencyMismatch     = "Cannot transfer between different currencies"
 
 	// Info messages
 	InfoCurrentBalance     = "Your current balance is ¤%.2f ϣƛöƞȡρƐρøʋ"

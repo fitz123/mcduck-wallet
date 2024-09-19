@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
-	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	tele "gopkg.in/telebot.v3"
 )
@@ -66,20 +65,14 @@ func HandleStart(c tele.Context) error {
 
 func HandleBalance(c tele.Context) error {
 	ctx := &botContext{c}
-	balance, err := core.GetBalance(ctx)
+	balance, currency, err := core.GetBalance(ctx)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Error: %v", err))
-	}
-
-	// Fetch the default currency
-	var defaultCurrency database.Currency
-	if err := database.DB.First(&defaultCurrency).Error; err != nil {
 		return c.Send(fmt.Sprintf("Error: %v", err))
 	}
 
 	// Format the balance with the currency
 	formattedBalance := fmt.Sprintf("Your current balance is %s %.2f %s",
-		defaultCurrency.Sign, balance, defaultCurrency.Name)
+		currency.Sign, balance, currency.Name)
 
 	return c.Send(formattedBalance)
 }

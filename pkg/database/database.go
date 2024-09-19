@@ -1,7 +1,6 @@
 package database
 
 import (
-	"log"
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/logger"
@@ -9,52 +8,13 @@ import (
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-
-func InitDB() {
-	var err error
-	DB, err = gorm.Open(sqlite.Open("mcduck_wallet.db"), &gorm.Config{})
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-
-	// Auto Migrate the schema
-	err = DB.AutoMigrate(&User{}, &Transaction{}, &Currency{})
-	if err != nil {
-		log.Fatal("Failed to migrate database:", err)
-	}
-
-	// Create default currency if it doesn't exist
-	var defaultCurrency Currency
-	if DB.First(&defaultCurrency).RowsAffected == 0 {
-		defaultCurrency = Currency{
-			Sign: "¤",
-			Name: "ϣƛöƞȡρƐρ(øʋ)",
-		}
-		DB.Create(&defaultCurrency)
-	}
-}
-
-func GetDefaultCurrency() Currency {
-	// Fetch the default currency
-	var defaultCurrency Currency
-	if err := DB.First(&defaultCurrency).Error; err != nil {
-		logger.Error("Error fetching currency information")
-	}
-	return defaultCurrency
-}
-
-type Currency struct {
-	gorm.Model
-	Sign string
-	Name string
-}
-
 type User struct {
 	gorm.Model
 	TelegramID   int64 `gorm:"uniqueIndex"`
 	Username     string
 	Balance      float64
+	CurrencyID   uint
+	Currency     Currency
 	IsAdmin      bool `gorm:"default:false"`
 	Transactions []Transaction
 }
@@ -63,8 +23,65 @@ type Transaction struct {
 	gorm.Model
 	UserID     uint
 	Amount     float64
-	Type       string // "deposit", "transfer", or "admin_deposit"
-	ToUserID   *uint  // Pointer to allow null for deposits
-	ToUsername string // New field to store the recipient's username
+	CurrencyID uint
+	Currency   Currency
+	Type       string
+	ToUserID   *uint
+	ToUsername string
 	Timestamp  time.Time
+}
+
+type Currency struct {
+	gorm.Model
+	Code      string `gorm:"uniqueIndex"`
+	Name      string
+	Sign      string
+	IsDefault bool `gorm:"default:false"`
+}
+
+var DB *gorm.DB
+
+func InitDB() {
+	var err error
+	DB, err = gorm.Open(sqlite.Open("mcduck_wallet.db"), &gorm.Config{})
+	if err != nil {
+		logger.Error("Failed to connect to database:", err)
+	}
+
+	// Auto Migrate the schema
+	err = DB.AutoMigrate(&Currency{}, &User{}, &Transaction{})
+	if err != nil {
+		logger.Error("Failed to migrate database:", err)
+	}
+
+	// Create default currency if it doesn't exist
+	var defaultCurrency Currency
+	if err := DB.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			defaultCurrency = Currency{
+				Code:      "SHL",
+				Name:      "ϣƛöƞȡρƐρ(øʋ)",
+				Sign:      "¤",
+				IsDefault: true,
+			}
+			DB.Create(&defaultCurrency)
+			logger.Info("Created default currency")
+		} else {
+			logger.Error("Error checking for default currency:", err)
+		}
+	}
+}
+
+func GetDefaultCurrency() (Currency, error) {
+	var currency Currency
+	err := DB.Where("is_default = ?", true).First(&currency).Error
+	return currency, err
+}
+
+func (c *Currency) BeforeCreate(tx *gorm.DB) error {
+	if c.IsDefault {
+		// Set all other currencies to non-default
+		tx.Model(&Currency{}).Where("is_default = ?", true).Update("is_default", false)
+	}
+	return nil
 }

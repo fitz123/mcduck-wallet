@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
-	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 )
 
@@ -33,33 +33,31 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
 	ctx := &webContext{r: r, userID: userID}
 
-	balance, err := core.GetBalance(ctx)
+	balance, currency, err := core.GetBalance(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to get balance", "error", err, "userID", userID)
+		http.Error(w, "Error fetching balance", http.StatusInternalServerError)
 		return
 	}
 
-	// Fetch the default currency
-	var defaultCurrency database.Currency
-	if err := database.DB.First(&defaultCurrency).Error; err != nil {
-		http.Error(w, "Error fetching currency information", http.StatusInternalServerError)
-		return
-	}
-
-	// Create a response object
 	response := struct {
-		Sign     string  `json:"sign"`
 		Value    float64 `json:"value"`
+		Sign     string  `json:"sign"`
 		Currency string  `json:"currency"`
 	}{
-		Sign:     defaultCurrency.Sign,
 		Value:    balance,
-		Currency: defaultCurrency.Name,
+		Sign:     currency.Sign,
+		Currency: currency.Name,
 	}
 
-	// Encode the response object as JSON
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("Failed to encode balance response", "error", err)
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Info("Balance retrieved successfully", "userID", userID, "balance", balance, "currency", currency.Code)
 }
 
 func TransferMoney(w http.ResponseWriter, r *http.Request) {
