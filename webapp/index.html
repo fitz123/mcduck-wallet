@@ -35,7 +35,6 @@
                 padding: 20px;
                 background-color: var(--background-color);
                 color: var(--text-color);
-                visibility: hidden;
             }
 
             .container {
@@ -339,24 +338,6 @@
                 document.getElementById("loading-screen").style.display =
                     "none";
                 document.getElementById("main-content").style.display = "block";
-                document.body.style.visibility = "visible";
-            }
-
-            function preRenderContent(data) {
-                try {
-                    let response = JSON.parse(data);
-                    document.getElementById("currency-sign").innerText =
-                        response.sign;
-                    document.getElementById("balance-value").innerText =
-                        response.value.toFixed(2);
-                    document.getElementById("currency-name").innerText =
-                        response.currency;
-                    document.getElementById("playstation-amount").innerText =
-                        `${response.sign}${response.value.toFixed(2)}`;
-                    debugLog("Content pre-rendered successfully");
-                } catch (error) {
-                    debugLog("Error pre-rendering content: " + error);
-                }
             }
 
             // Failsafe: Show content after MAX_WAIT_TIME
@@ -376,9 +357,7 @@
 
             htmx.on("htmx:afterRequest", (evt) => {
                 debugLog("After request: " + evt.detail.pathInfo.requestPath);
-                if (evt.detail.successful) {
-                    preRenderContent(evt.detail.xhr.responseText);
-                }
+
                 if (evt.detail.target.id === "transfer-result") {
                     let response = evt.detail.xhr.responseText;
                     let isError =
@@ -391,7 +370,6 @@
             htmx.on("htmx:afterSettle", (evt) => {
                 debugLog("After settle: " + evt.detail.target.id);
                 if (evt.detail.target.id === "balance-value") {
-                    showContent();
                     try {
                         let response = JSON.parse(evt.detail.xhr.responseText);
                         document.getElementById("currency-sign").innerText =
@@ -406,7 +384,6 @@
                         showContent(); // Show content after balance is loaded
                     } catch (error) {
                         debugLog("Error parsing balance: " + error);
-                        showContent();
                     }
                 } else if (evt.detail.target.id === "history-list") {
                     try {
@@ -422,12 +399,6 @@
 
             htmx.on("htmx:load", () => {
                 debugLog("HTMX load event");
-                htmx.trigger(document.body, "balanceLoad");
-            });
-
-            // Trigger initial load
-            document.addEventListener("DOMContentLoaded", () => {
-                debugLog("DOM content loaded");
                 htmx.trigger(document.body, "balanceLoad");
             });
 
