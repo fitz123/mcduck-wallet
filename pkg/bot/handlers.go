@@ -5,6 +5,7 @@ package bot
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
 	"github.com/fitz123/mcduck-wallet/pkg/database"
@@ -111,5 +112,7 @@ func HandleHistory(c tele.Context) error {
 		return c.Send(fmt.Sprintf("Error fetching transaction history: %v", err))
 	}
 
-	return c.Send(formatTransactionHistory(transactions))
+	formattedTransactions := messages.FormatTransactionHistory(transactions)
+	response := fmt.Sprintf("*Transaction History*\n\n%s", strings.Join(formattedTransactions, "\n\n"))
+	return c.Send(response, &tele.SendOptions{ParseMode: tele.ModeMarkdown})
 }
