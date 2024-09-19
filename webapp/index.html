@@ -1,147 +1,203 @@
 <!doctype html>
 <html lang="en">
     <head>
+        <!-- Meta tags and title -->
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>McDuck Wallet WebApp</title>
+        <!-- Google Fonts -->
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+            rel="stylesheet"
+        />
+        <!-- HTMX and Telegram Web App JS SDK -->
         <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10"></script>
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        <!-- Styles -->
         <style>
+            /* Root variables for colors and fonts */
+            :root {
+                --primary-color: #4a90e2;
+                --background-color: #f5f7fa;
+                --card-background: #ffffff;
+                --text-color: #333333;
+                --text-muted-color: #777777;
+                --success-color: #27ae60;
+                --error-color: #e74c3c;
+                --border-radius: 8px;
+                --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                --font-family: "Roboto", sans-serif;
+            }
+
             body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                    Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans",
-                    "Helvetica Neue", sans-serif;
+                font-family: var(--font-family);
                 margin: 0;
                 padding: 20px;
-                background-color: #ffffff;
-                color: #000000;
+                background-color: var(--background-color);
+                color: var(--text-color);
+            }
+
+            .container {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .balance-section,
+            .transaction-history {
+                background-color: var(--card-background);
+                padding: 20px;
+                border-radius: var(--border-radius);
+                box-shadow: var(--box-shadow);
+                margin-bottom: 20px;
             }
 
             .balance-section {
-                background-color: #ffffff;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
                 text-align: center;
             }
+
             .total-balance {
-                font-size: 14px;
-                color: #888;
-                margin-bottom: 5px;
+                font-size: 16px;
+                color: var(--text-muted-color);
+                margin-bottom: 10px;
+                font-weight: 500;
             }
 
             .balance-amount {
-                font-size: 32px;
-                font-weight: bold;
+                font-size: 36px;
+                font-weight: 700;
                 margin-bottom: 5px;
+                color: var(--primary-color);
             }
+
             .currency-sign {
-                color: #888;
+                color: var(--text-color);
             }
+
             .currency-name {
                 font-size: 14px;
-                color: #888;
+                color: var(--text-muted-color);
             }
+
             .send-btn {
-                background-color: #4c8bf5;
+                background-color: var(--primary-color);
                 color: white;
                 border: none;
-                padding: 10px 20px;
-                border-radius: 20px;
+                padding: 12px 24px;
+                border-radius: 30px;
                 font-size: 16px;
                 cursor: pointer;
-                margin-top: 15px;
+                margin-top: 20px;
+                transition: background-color 0.2s ease;
             }
+
+            .send-btn:hover {
+                background-color: #357abd;
+            }
+
             .playstation {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 15px 0;
-                border-top: 1px solid #eee;
-                margin-top: 15px;
+                border-top: 1px solid #e4e6eb;
+                margin-top: 20px;
             }
+
             .playstation-icon {
-                background-color: #7b68ee;
+                background-color: var(--primary-color);
                 color: white;
-                width: 40px;
-                height: 40px;
+                width: 50px;
+                height: 50px;
                 border-radius: 50%;
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                font-size: 20px;
-                margin-right: 5px;
+                font-size: 24px;
+                margin-right: 15px;
             }
+
             .playstation-text {
-                margin-right: auto;
+                color: var(--text-color);
+                font-size: 16px;
+                font-weight: 500;
             }
+
             .playstation-amount {
-                font-weight: bold;
+                font-weight: 700;
+                color: var(--text-color);
+                font-size: 18px;
+                margin-left: auto;
             }
+
             .transaction-history {
-                background-color: #f0f0f0;
-                border-radius: 10px;
-                padding: 15px;
                 display: flex;
                 align-items: center;
                 cursor: pointer;
-                margin-bottom: 10px;
+                justify-content: center;
             }
+
             .transaction-history-icon {
                 margin-right: 10px;
-                font-size: 20px;
+                font-size: 24px;
+                color: var(--primary-color);
             }
+
             .transfer-form {
                 display: none;
                 margin-top: 20px;
+                text-align: left;
             }
+
             .input {
                 width: 100%;
-                padding: 10px;
-                margin-bottom: 10px;
-                border: 1px solid #ccc;
-                border-radius: 5px;
+                padding: 12px 15px;
+                margin-bottom: 15px;
+                border: 1px solid #dddfe2;
+                border-radius: var(--border-radius);
+                font-size: 16px;
+                font-family: var(--font-family);
             }
+
             .message {
-                padding: 10px;
-                margin: 10px 0;
-                border-radius: 5px;
-            }
-            .success {
-                color: #008000;
-                background-color: #e6ffe6;
-                border: 1px solid #008000;
-            }
-            .error {
-                color: #ff0000;
-                background-color: #ffeeee;
-                border: 1px solid #ff0000;
-            }
-            .history-dropdown {
-                display: none;
-                background-color: #f9f9f9;
-                border-radius: 0 0 10px 10px;
                 padding: 15px;
-                margin-top: -10px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                margin: 15px 0;
+                border-radius: var(--border-radius);
+                font-size: 16px;
             }
-            .history-dropdown.show {
-                display: block;
+
+            .success {
+                color: var(--success-color);
+                background-color: #e6f3e6;
+                border: 1px solid var(--success-color);
             }
-            .transaction {
-                padding: 10px 0;
-                border-bottom: 1px solid #eee;
+
+            .error {
+                color: var(--error-color);
+                background-color: #fce8e6;
+                border: 1px solid var(--error-color);
             }
-            .transaction:last-child {
-                border-bottom: none;
+
+            /* Responsive Design */
+            @media (max-width: 600px) {
+                .playstation {
+                    flex-direction: row;
+                    align-items: center;
+                }
+
+                .playstation-icon {
+                    margin-bottom: 0;
+                }
+
+                .playstation-text {
+                    margin-bottom: 0;
+                }
             }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="balance-section">
-                <div class="total-balance">Total balance</div>
+                <div class="total-balance">Total Balance</div>
                 <div class="balance-wrapper">
                     <div class="balance-amount">
                         <span id="currency-sign" class="currency-sign"></span>
@@ -181,8 +237,8 @@
                     >
                         Send
                     </button>
+                    <div id="transfer-result"></div>
                 </div>
-                <div id="transfer-result"></div>
 
                 <div class="playstation">
                     <div class="playstation-icon">🎮</div>
@@ -194,8 +250,8 @@
             </div>
 
             <div class="transaction-history" onclick="openTransactionsPage()">
-                <span class="transaction-history-icon">≡</span>
-                Transaction history
+                <span class="transaction-history-icon">📄</span>
+                Transaction History
             </div>
             <div id="history-list" class="history-dropdown"></div>
         </div>
