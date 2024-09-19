@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
+	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	tele "gopkg.in/telebot.v3"
 )
@@ -45,7 +46,7 @@ func HandleStart(c tele.Context) error {
 	}
 
 	// Create a keyboard with a WebApp button
-	webAppURL := "https://t.me/mcduckwalletbot/mcduckwallet"
+	webAppURL := "https://3a64-181-111-49-211.ngrok-free.app"
 	webAppButton := tele.InlineButton{
 		Text: "Open McDuck Wallet",
 		WebApp: &tele.WebApp{
@@ -68,7 +69,18 @@ func HandleBalance(c tele.Context) error {
 	if err != nil {
 		return c.Send(fmt.Sprintf("Error: %v", err))
 	}
-	return c.Send(fmt.Sprintf(messages.InfoCurrentBalance, balance))
+
+	// Fetch the default currency
+	var defaultCurrency database.Currency
+	if err := database.DB.First(&defaultCurrency).Error; err != nil {
+		return c.Send(fmt.Sprintf("Error: %v", err))
+	}
+
+	// Format the balance with the currency
+	formattedBalance := fmt.Sprintf("Your current balance is %s %.2f %s",
+		defaultCurrency.Sign, balance, defaultCurrency.Name)
+
+	return c.Send(formattedBalance)
 }
 
 func HandleTransfer(c tele.Context) error {

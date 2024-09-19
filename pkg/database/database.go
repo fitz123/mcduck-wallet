@@ -18,10 +18,26 @@ func InitDB() {
 	}
 
 	// Auto Migrate the schema
-	err = DB.AutoMigrate(&User{}, &Transaction{})
+	err = DB.AutoMigrate(&User{}, &Transaction{}, &Currency{})
 	if err != nil {
 		log.Fatal("Failed to migrate database:", err)
 	}
+
+	// Create default currency if it doesn't exist
+	var defaultCurrency Currency
+	if DB.First(&defaultCurrency).RowsAffected == 0 {
+		defaultCurrency = Currency{
+			Sign: "¤",
+			Name: "ϣƛöƞȡρƐρ(øʋ)",
+		}
+		DB.Create(&defaultCurrency)
+	}
+}
+
+type Currency struct {
+	gorm.Model
+	Sign string
+	Name string
 }
 
 type User struct {
