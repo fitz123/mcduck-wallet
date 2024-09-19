@@ -23,7 +23,10 @@ func (wc *webContext) GetUserID() int64 {
 }
 
 func ServeHTML(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "webapp/index.html")
+	if r.URL.Path != "/" {
+		r.URL.Path += ".html"
+	}
+	http.FileServer(http.Dir("webapp")).ServeHTTP(w, r)
 }
 
 func GetBalance(w http.ResponseWriter, r *http.Request) {
