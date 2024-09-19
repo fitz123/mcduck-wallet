@@ -6,6 +6,23 @@ import (
 )
 
 func DebugCurrencyAndUserData() {
+	// Update user and transaction currencies
+	if err := ResetDefaultCurrency(); err != nil {
+		logger.Error("Failed to reset default currency", "error", err)
+	}
+
+	if err := UpdateUserCurrencies(); err != nil {
+		logger.Error("Failed to update user currencies", "error", err)
+	}
+
+	if err := UpdateTransactionCurrencies(); err != nil {
+		logger.Error("Failed to update transaction currencies", "error", err)
+	}
+
+	GetDefaultCurrency()
+}
+
+func GetDebugCurrencyAndUserData() {
 	var currencies []Currency
 	if err := DB.Find(&currencies).Error; err != nil {
 		logger.Error("Failed to fetch currencies", "error", err)
@@ -40,7 +57,12 @@ func UpdateUserCurrencies() error {
 		return result.Error
 	}
 
-	logger.Info("Updated user currencies", "usersUpdated", result.RowsAffected)
+	if result.RowsAffected > 0 {
+		logger.Warn("Updated user currencies", "usersUpdated", result.RowsAffected)
+	} else {
+		logger.Debug("All user currencies are set")
+	}
+
 	return nil
 }
 
@@ -57,7 +79,12 @@ func UpdateTransactionCurrencies() error {
 		return result.Error
 	}
 
-	logger.Info("Updated transaction currencies", "transactionsUpdated", result.RowsAffected)
+	if result.RowsAffected > 0 {
+		logger.Warn("Updated transaction currencies", "transactionsUpdated", result.RowsAffected)
+	} else {
+		logger.Debug("All transaction currencies are set")
+	}
+
 	return nil
 }
 

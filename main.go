@@ -19,20 +19,6 @@ import (
 func main() {
 	// Initialize database
 	database.InitDB()
-
-	// Update user and transaction currencies
-	if err := database.UpdateUserCurrencies(); err != nil {
-		logger.Error("Failed to update user currencies", "error", err)
-	}
-
-	if err := database.UpdateTransactionCurrencies(); err != nil {
-		logger.Error("Failed to update transaction currencies", "error", err)
-	}
-
-	if err := database.ResetDefaultCurrency(); err != nil {
-		logger.Error("Failed to reset default currency", "error", err)
-	}
-
 	database.DebugCurrencyAndUserData()
 	logger.Info("Database initialized")
 
