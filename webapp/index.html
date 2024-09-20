@@ -149,13 +149,14 @@
             }
 
             .input {
-                width: 100%;
+                width: 100%; /* Subtracting padding */
                 padding: 12px 15px;
                 margin-bottom: 15px;
                 border: 1px solid #dddfe2;
                 border-radius: var(--border-radius);
                 font-size: 16px;
                 font-family: var(--font-family);
+                box-sizing: border-box;
             }
 
             .message {
