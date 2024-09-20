@@ -323,6 +323,9 @@
             let tg = window.Telegram.WebApp;
             tg.expand();
 
+            // Hide the back button when the main page loads
+            tg.BackButton.hide();
+
             let contentLoaded = false;
             const MAX_WAIT_TIME = 5000; // 5 seconds maximum wait time
 
