@@ -15,3 +15,6 @@ go.work
 
 # Environment variables
 .env
+
+# Binaries
+bin/
