@@ -11,7 +11,11 @@
             rel="stylesheet"
         />
         <!-- HTMX and Telegram Web App JS SDK -->
-        <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10"></script>
+        <script
+            src="https://unpkg.com/htmx.org@2.0.2"
+            integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ"
+            crossorigin="anonymous"
+        ></script>
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <!-- Styles -->
         <style>
@@ -20,10 +24,10 @@
                 --primary-color: #4a90e2;
                 --background-color: #f5f7fa;
                 --card-background: #ffffff;
-                --text-color: #333333;
+                --text-color: #4f4f4f;
                 --text-muted-color: #777777;
-                --success-color: #27ae60;
-                --error-color: #e74c3c;
+                --success-color: #66e784;
+                --error-color: #f48377;
                 --border-radius: 8px;
                 --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 --font-family: "Roboto", sans-serif;
@@ -63,14 +67,21 @@
             }
 
             .balance-amount {
-                font-size: 36px;
+                font-size: 42px;
                 font-weight: 700;
                 margin-bottom: 5px;
                 color: var(--primary-color);
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
 
             .currency-sign {
-                color: var(--text-color);
+                color: var(--text-muted-color);
+                font-size: 32px; /* Adjust this value as needed */
+                margin-right: 2px; /* Add a small space between sign and amount */
+                position: relative;
+                top: -2px; /* Fine-tune vertical alignment if necessary */
             }
 
             .currency-name {
@@ -149,7 +160,7 @@
             }
 
             .input {
-                width: 100%; /* Subtracting padding */
+                width: 100%;
                 padding: 12px 15px;
                 margin-bottom: 15px;
                 border: 1px solid #dddfe2;
@@ -383,8 +394,7 @@
                             response.currency;
                         document.getElementById(
                             "playstation-amount",
-                        ).innerText =
-                            `${response.sign}${response.value.toFixed(2)}`;
+                        ).innerText = `${response.value.toFixed(2)}`;
                         showContent(); // Show content after balance is loaded
                     } catch (error) {
                         debugLog("Error parsing balance: " + error);
