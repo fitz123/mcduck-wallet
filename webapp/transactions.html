@@ -19,10 +19,10 @@
                 --primary-color: #4a90e2;
                 --background-color: #f5f7fa;
                 --card-background: #ffffff;
-                --text-color: #333333;
-                --text-muted-color: #777777;
-                --success-color: #27ae60;
-                --error-color: #e74c3c;
+                --text-color: #4f4f4f;
+                --text-muted-color: #999999;
+                --success-color: #66e784;
+                --error-color: #f48377;
                 --border-radius: 8px;
                 --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 --font-family: "Roboto", sans-serif;
@@ -44,8 +44,8 @@
             h2 {
                 color: var(--primary-color);
                 text-align: center;
-                margin-bottom: 20px;
-                font-size: 24px;
+                margin-bottom: 25px;
+                font-size: 18px;
             }
 
             .transaction {
@@ -75,18 +75,19 @@
             .description {
                 font-weight: 500;
                 color: var(--text-color);
-                font-size: 16px;
+                font-size: 20px;
                 margin-bottom: 5px;
             }
 
             .timestamp {
                 color: var(--text-muted-color);
-                font-size: 14px;
+                font-size: 17px;
             }
 
             .amount {
                 font-weight: 500;
-                font-size: 18px;
+                font-size: 24px;
+                text-align: right;
             }
 
             .received {
@@ -97,15 +98,17 @@
                 color: var(--error-color);
             }
 
+            .transaction-type {
+                color: var(--text-muted-color);
+                font-size: 18px;
+                text-align: right;
+            }
+
             /* Responsive Design */
             @media (max-width: 600px) {
                 .transaction {
                     flex-direction: row;
                     align-items: flex-start;
-                }
-
-                .amount {
-                    margin-top: 10px;
                 }
             }
         </style>
@@ -189,7 +192,10 @@
                                 hour12: true,
                             })}</div>
                         </div>
-                        <div class="amount ${amountClass}">${t.currency_sign}${amount} ${amountClass === "received" ? "Received" : "Sent"}</div>
+                        <div class="right-content">
+                            <div class="amount ${amountClass}">${amount}</div>
+                            <div class="transaction-type">${amountClass === "received" ? "Received" : "Sent"}</div>
+                        </div>
                     </div>
                 `;
                                 })
