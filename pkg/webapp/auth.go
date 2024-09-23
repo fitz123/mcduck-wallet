@@ -28,28 +28,32 @@ func InitAuth(botToken string) {
 // AuthMiddleware is a middleware that validates the Telegram WebApp init data
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		logger.Debug("AuthMiddleware: Starting authentication process")
+
 		initData := r.Header.Get("X-Telegram-Init-Data")
 
+		logger.Debug("AuthMiddleware: Received initData", "initData", initData)
+
 		if initData == "" {
-			logger.Warn("No initData received")
+			logger.Warn("AuthMiddleware: No initData received")
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		if !validateInitData(initData) {
-			logger.Warn("Invalid initData")
+			logger.Warn("AuthMiddleware: Invalid initData")
 			http.Error(w, "Invalid init data", http.StatusUnauthorized)
 			return
 		}
 
 		userID, err := getUserIDFromInitData(initData)
 		if err != nil {
-			logger.Error("Error getting user ID", "error", err)
+			logger.Error("AuthMiddleware: Error getting user ID", "error", err)
 			http.Error(w, "Invalid user data", http.StatusUnauthorized)
 			return
 		}
 
-		logger.Info("Authenticated user", "userID", userID)
+		logger.Info("AuthMiddleware: Authenticated user", "userID", userID)
 
 		// Set user ID in context
 		ctx := r.Context()
