@@ -7,8 +7,9 @@ import (
 )
 
 templ TransactionHistory(transactions []models.TransactionJSON) {
-    @header()
-    @style()
+    @showBackButton()
+    @historyStyles()
+
     <div class="container">
         <h2>Transaction History</h2>
         for _, t := range transactions {
@@ -17,7 +18,7 @@ templ TransactionHistory(transactions []models.TransactionJSON) {
     </div>
 }
 
-templ header() {
+templ showBackButton() {
     <script>
     let tg = window.Telegram.WebApp;
     tg.BackButton.show();
@@ -27,42 +28,8 @@ templ header() {
     </script>
 }
 
-templ style() {
+templ historyStyles() {
     <style>
-        /* Root variables for colors and fonts */
-        :root {
-            --primary-color: #4a90e2;
-            --background-color: #f5f7fa;
-            --card-background: #ffffff;
-            --text-color: #4f4f4f;
-            --text-muted-color: #999999;
-            --success-color: #66e784;
-            --error-color: #f48377;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --font-family: "Roboto", sans-serif;
-        }
-
-        body {
-            font-family: var(--font-family);
-            margin: 0;
-            padding: 20px;
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        h2 {
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 18px;
-        }
-
         .transaction {
             display: flex;
             justify-content: space-between;
@@ -119,14 +86,6 @@ templ style() {
             font-size: 18px;
             text-align: right;
         }
-
-        /* Responsive Design */
-        @media (max-width: 600px) {
-            .transaction {
-                flex-direction: row;
-                align-items: flex-start;
-            }
-        }
     </style>
 }
 
@@ -144,7 +103,7 @@ templ transactionItem(t models.TransactionJSON) {
         </div>
         <div class="right-content">
             <div class={ "amount", ternary(t.Amount >= 0, "received", "sent") }>
-                { t.CurrencySign } { fmt.Sprintf("%.2f", math.Abs(t.Amount)) }
+            { ternary(t.Amount >= 0, "+", "-") }{ fmt.Sprintf("%.0f", math.Abs(t.Amount)) }
             </div>
         </div>
     </div>
