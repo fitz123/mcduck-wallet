@@ -1,0 +1,42 @@
+package views
+
+import (
+    "github.com/fitz123/mcduck-wallet/pkg/models"
+    "fmt"
+    "math"
+)
+
+templ TransactionHistory(transactions []models.TransactionJSON) {
+    <div class="container">
+        <h2>Transaction History</h2>
+        <div id="transaction-list">
+            for _, t := range transactions {
+                <div class="transaction">
+                    <div class="left-content">
+                        <div class="timestamp">{ t.Timestamp.Format("2 Jan, 3:04 PM") }</div>
+                    </div>
+                    <div class="right-content">
+                        <div class={ "amount", ternary(t.Amount >= 0, "received", "sent") }>
+                            { t.CurrencySign } { fmt.Sprintf("%.2f", math.Abs(t.Amount)) }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+func truncateUsername(username string) string {
+    maxLength := 18
+    if len(username) > maxLength {
+        return username[:maxLength-3] + "..."
+    }
+    return username
+}
+
+func ternary(condition bool, trueVal, falseVal string) string {
+    if condition {
+        return trueVal
+    }
+    return falseVal
+}
