@@ -167,10 +167,10 @@ templ Index() {
                         Loading balance...
                 </div>
             </div>
-            <button class="transaction-history"
-                hx-get="/history"
-                hx-target="body">
+            <button class="transaction-history">
+                <div hx-get="/history" hx-target="body">
                     Transaction history
+                </div>
             </button>
         </body>
         </html>
