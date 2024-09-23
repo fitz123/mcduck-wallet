@@ -1,16 +1,15 @@
-// File: pkg/webapp/handlers.go
-
 package webapp
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/a-h/templ"
 	"github.com/fitz123/mcduck-wallet/pkg/core"
 	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
+	"github.com/fitz123/mcduck-wallet/pkg/webapp/views"
 )
 
 type webContext struct {
@@ -23,10 +22,13 @@ func (wc *webContext) GetUserID() int64 {
 }
 
 func ServeHTML(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		r.URL.Path += ".html"
+	component := views.Index()
+	err := component.Render(r.Context(), w)
+	if err != nil {
+		logger.Error("ServeHTML: Error rendering index", "error", err)
+		http.Error(w, "Error rendering index", http.StatusInternalServerError)
+		return
 	}
-	http.FileServer(http.Dir("webapp")).ServeHTTP(w, r)
 }
 
 func GetBalance(w http.ResponseWriter, r *http.Request) {
@@ -40,24 +42,13 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := struct {
-		Value    float64 `json:"value"`
-		Sign     string  `json:"sign"`
-		Currency string  `json:"currency"`
-	}{
-		Value:    balance,
-		Sign:     currency.Sign,
-		Currency: currency.Name,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Error("Failed to encode balance response", "error", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+	component := views.Balance(balance, currency)
+	err = component.Render(r.Context(), w)
+	if err != nil {
+		logger.Error("Error rendering balance template", "error", err)
+		http.Error(w, "Error rendering balance", http.StatusInternalServerError)
 		return
 	}
-
-	logger.Info("Balance retrieved successfully", "userID", userID, "balance", balance, "currency", currency.Code)
 }
 
 func TransferMoney(w http.ResponseWriter, r *http.Request) {
@@ -77,8 +68,7 @@ func TransferMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUsername))
+	w.Write([]byte(fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUsername)))
 }
 
 func GetTransactionHistory(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +81,6 @@ func GetTransactionHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(transactions)
+	component := views.TransactionHistory(transactions)
+	templ.Handler(component).ServeHTTP(w, r)
 }
