@@ -7,6 +7,15 @@ import (
 )
 
 templ TransactionHistory(transactions []models.TransactionJSON) {
+    <script>
+    let tg = window.Telegram.WebApp;
+
+    // Initialize the back button
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+        window.location.href = "/"; // Navigate back to the main page
+    });
+    </script>
     <style>
         /* Root variables for colors and fonts */
         :root {
@@ -107,19 +116,17 @@ templ TransactionHistory(transactions []models.TransactionJSON) {
             }
         }
     </style>
-    <div class="container">
         <h2>Transaction History</h2>
-        <div id="transaction-list">
             for _, t := range transactions {
                 <div class="transaction">
                     <div class="left-content">
-                    <div class="description">
-                                     if t.Amount < 0 {
-                                         To { truncateUsername(t.ToUsername) }
-                                     } else {
-                                         From { truncateUsername(t.ToUsername) }
-                                     }
-                                 </div>
+                        <div class="description">
+                                        if t.Amount < 0 {
+                                            To { truncateUsername(t.ToUsername) }
+                                        } else {
+                                            From { truncateUsername(t.ToUsername) }
+                                        }
+                        </div>
                         <div class="timestamp">{ t.Timestamp.Format("2 Jan, 3:04 PM") }</div>
                     </div>
                     <div class="right-content">
@@ -129,8 +136,6 @@ templ TransactionHistory(transactions []models.TransactionJSON) {
                     </div>
                 </div>
             }
-        </div>
-    </div>
 }
 
 func truncateUsername(username string) string {
