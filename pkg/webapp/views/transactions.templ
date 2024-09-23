@@ -7,15 +7,27 @@ import (
 )
 
 templ TransactionHistory(transactions []models.TransactionJSON) {
+    @header()
+    @style()
+    <div class="container">
+        <h2>Transaction History</h2>
+        for _, t := range transactions {
+            @transactionItem(t)
+        }
+    </div>
+}
+
+templ header() {
     <script>
     let tg = window.Telegram.WebApp;
-
-    // Initialize the back button
     tg.BackButton.show();
     tg.BackButton.onClick(() => {
-        window.location.href = "/"; // Navigate back to the main page
+        window.location.href = "/";
     });
     </script>
+}
+
+templ style() {
     <style>
         /* Root variables for colors and fonts */
         :root {
@@ -116,26 +128,26 @@ templ TransactionHistory(transactions []models.TransactionJSON) {
             }
         }
     </style>
-        <h2>Transaction History</h2>
-            for _, t := range transactions {
-                <div class="transaction">
-                    <div class="left-content">
-                        <div class="description">
-                                        if t.Amount < 0 {
-                                            To { truncateUsername(t.ToUsername) }
-                                        } else {
-                                            From { truncateUsername(t.ToUsername) }
-                                        }
-                        </div>
-                        <div class="timestamp">{ t.Timestamp.Format("2 Jan, 3:04 PM") }</div>
-                    </div>
-                    <div class="right-content">
-                        <div class={ "amount", ternary(t.Amount >= 0, "received", "sent") }>
-                            { t.CurrencySign } { fmt.Sprintf("%.2f", math.Abs(t.Amount)) }
-                        </div>
-                    </div>
-                </div>
-            }
+}
+
+templ transactionItem(t models.TransactionJSON) {
+    <div class="transaction">
+        <div class="left-content">
+            <div class="description">
+                if t.Amount < 0 {
+                    To { truncateUsername(t.ToUsername) }
+                } else {
+                    From { truncateUsername(t.ToUsername) }
+                }
+            </div>
+            <div class="timestamp">{ t.Timestamp.Format("2 Jan, 3:04 PM") }</div>
+        </div>
+        <div class="right-content">
+            <div class={ "amount", ternary(t.Amount >= 0, "received", "sent") }>
+                { t.CurrencySign } { fmt.Sprintf("%.2f", math.Abs(t.Amount)) }
+            </div>
+        </div>
+    </div>
 }
 
 func truncateUsername(username string) string {
