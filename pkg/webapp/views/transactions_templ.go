@@ -52,7 +52,7 @@ func TransactionHistory(transactions []models.TransactionJSON) templ.Component {
 				var templ_7745c5c3_Var2 string
 				templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(truncateUsername(t.ToUsername))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 118, Col: 76}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 125, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 				if templ_7745c5c3_Err != nil {
@@ -66,7 +66,7 @@ func TransactionHistory(transactions []models.TransactionJSON) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(truncateUsername(t.ToUsername))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 120, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 127, Col: 81}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -80,7 +80,7 @@ func TransactionHistory(transactions []models.TransactionJSON) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(t.Timestamp.Format("2 Jan, 3:04 PM"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 123, Col: 85}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 130, Col: 85}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -115,7 +115,7 @@ func TransactionHistory(transactions []models.TransactionJSON) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(t.CurrencySign)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 127, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 134, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -128,7 +128,7 @@ func TransactionHistory(transactions []models.TransactionJSON) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.2f", math.Abs(t.Amount)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 127, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transactions.templ`, Line: 134, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -138,10 +138,6 @@ func TransactionHistory(transactions []models.TransactionJSON) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-		}
-		templ_7745c5c3_Err = templ.WriteWatchModeString(templ_7745c5c3_Buffer, 11)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
 		}
 		return templ_7745c5c3_Err
 	})

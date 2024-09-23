@@ -6,12 +6,9 @@ import (
 )
 
 templ Balance(balance float64, currency database.Currency) {
-    <div class="balance-section">
-        <div class="total-balance">Total Balance</div>
         <div class="balance-amount">
             <span class="currency-sign">{ currency.Sign }</span>
             <span class="balance-amount">{ fmt.Sprintf("%.2f", balance) }</span>
         </div>
         <span class="currency-name">{ currency.Name }</span>
-    </div>
 }
