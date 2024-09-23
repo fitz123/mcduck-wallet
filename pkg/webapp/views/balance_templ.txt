@@ -1,0 +1,4 @@
+<div class=\"balance-section\"><div class=\"total-balance\">Total Balance</div><div class=\"balance-amount\"><span class=\"currency-sign\">
+</span> <span class=\"balance-amount\">
+</span></div><span class=\"currency-name\">
+</span></div>

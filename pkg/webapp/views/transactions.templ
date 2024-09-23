@@ -7,12 +7,119 @@ import (
 )
 
 templ TransactionHistory(transactions []models.TransactionJSON) {
+    <style>
+        /* Root variables for colors and fonts */
+        :root {
+            --primary-color: #4a90e2;
+            --background-color: #f5f7fa;
+            --card-background: #ffffff;
+            --text-color: #4f4f4f;
+            --text-muted-color: #999999;
+            --success-color: #66e784;
+            --error-color: #f48377;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --font-family: "Roboto", sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 18px;
+        }
+
+        .transaction {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--box-shadow);
+            transition:
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .transaction:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .left-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .description {
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .timestamp {
+            color: var(--text-muted-color);
+            font-size: 17px;
+        }
+
+        .amount {
+            font-weight: 500;
+            font-size: 24px;
+            text-align: right;
+            margin-top: 7px;
+        }
+
+        .received {
+            color: var(--success-color);
+        }
+
+        .sent {
+            color: var(--error-color);
+        }
+
+        .transaction-type {
+            color: var(--text-muted-color);
+            font-size: 18px;
+            text-align: right;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .transaction {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+    </style>
     <div class="container">
         <h2>Transaction History</h2>
         <div id="transaction-list">
             for _, t := range transactions {
                 <div class="transaction">
                     <div class="left-content">
+                    <div class="description">
+                                     if t.Amount < 0 {
+                                         To { truncateUsername(t.ToUsername) }
+                                     } else {
+                                         From { truncateUsername(t.ToUsername) }
+                                     }
+                                 </div>
                         <div class="timestamp">{ t.Timestamp.Format("2 Jan, 3:04 PM") }</div>
                     </div>
                     <div class="right-content">
