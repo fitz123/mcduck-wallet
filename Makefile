@@ -12,6 +12,8 @@ all: build transfer clean
 
 # Build the binary
 build:
+	@echo "Generating html templates..."
+	templ generate ./...
 	@echo "Building binary..."
 	@mkdir -p bin
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-cc \
