@@ -11,10 +11,11 @@ const (
 	ErrNegativeAmount       = "Transfer amount must be positive"
 	ErrCannotTransferToSelf = "Cannot transfer to self"
 	ErrCurrencyMismatch     = "Cannot transfer between different currencies"
+	ErrCurrencyNotExist     = "Currency does not supported"
 
 	// Info messages
-	InfoTransferSuccessful = "Successfully transferred %.2f to @%s"
-	InfoWelcome            = "Welcome to McDuck Wallet, @%s! Your personal finance assistant. Your current balance is ¤%.2f.\n\nUse the button below to open the WebApp."
+	InfoTransferSuccessful = "Successfully transferred %f.0f %s to @%s"
+	InfoWelcome            = "Welcome to McDuck Wallet, @%s! Your personal finance assistant.\nUse the button below to open the WebApp."
 	InfoNoTransactions     = "No transactions found."
 
 	// Command usage

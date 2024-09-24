@@ -7,6 +7,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/fitz123/mcduck-wallet/pkg/core"
+	"github.com/fitz123/mcduck-wallet/pkg/database"
 	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	"github.com/fitz123/mcduck-wallet/pkg/webapp/views"
@@ -35,18 +36,32 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
 	ctx := &webContext{r: r, userID: userID}
 
-	balance, currency, err := core.GetBalance(ctx)
+	balances, err := core.GetBalance(ctx)
 	if err != nil {
-		logger.Error("Failed to get balance", "error", err, "userID", userID)
-		http.Error(w, "Error fetching balance", http.StatusInternalServerError)
+		logger.Error("Failed to get balances", "error", err, "userID", userID)
+		http.Error(w, "Error fetching balances", http.StatusInternalServerError)
 		return
 	}
 
-	component := views.Balance(balance, currency)
+	// Convert balances to a slice of BalanceWithCurrency
+	balancesWithCurrency := make([]views.BalanceWithCurrency, 0, len(balances))
+	for currencyCode, amount := range balances {
+		currency, err := database.GetCurrencyByCode(currencyCode)
+		if err != nil {
+			logger.Error("Failed to get currency", "error", err, "currencyCode", currencyCode)
+			continue
+		}
+		balancesWithCurrency = append(balancesWithCurrency, views.BalanceWithCurrency{
+			Amount:   amount,
+			Currency: currency,
+		})
+	}
+
+	component := views.Balances(balancesWithCurrency)
 	err = component.Render(r.Context(), w)
 	if err != nil {
-		logger.Error("Error rendering balance template", "error", err)
-		http.Error(w, "Error rendering balance", http.StatusInternalServerError)
+		logger.Error("Error rendering balances template", "error", err)
+		http.Error(w, "Error rendering balances", http.StatusInternalServerError)
 		return
 	}
 }
@@ -62,13 +77,34 @@ func TransferMoney(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = core.TransferMoney(ctx, toUsername, amount)
+	// Get the currency from the form, or use default if not provided
+	currencyCode := r.FormValue("currency")
+	if currencyCode == "" {
+		defaultCurrency, err := database.GetDefaultCurrency()
+		if err != nil {
+			logger.Error("Failed to get default currency", "error", err)
+			http.Error(w, "Failed to process transfer", http.StatusInternalServerError)
+			return
+		}
+		currencyCode = defaultCurrency.Code
+	}
+
+	err = core.TransferMoney(ctx, toUsername, amount, currencyCode)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Write([]byte(fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUsername)))
+	// Get the currency details for the response message
+	currency, err := database.GetCurrencyByCode(currencyCode)
+	if err != nil {
+		logger.Error("Failed to get currency details", "error", err, "currencyCode", currencyCode)
+		http.Error(w, "Transfer successful, but failed to get currency details", http.StatusInternalServerError)
+		return
+	}
+
+	response := fmt.Sprintf(messages.InfoTransferSuccessful, currency.Sign, amount, currency.Code, toUsername)
+	w.Write([]byte(response))
 }
 
 func GetTransactionHistory(w http.ResponseWriter, r *http.Request) {

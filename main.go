@@ -19,7 +19,6 @@ import (
 func main() {
 	// Initialize database
 	database.InitDB()
-	database.DebugCurrencyAndUserData()
 	logger.Info("Database initialized")
 
 	// Initialize bot
@@ -43,6 +42,9 @@ func main() {
 	teleBot.Handle("/set", bot.HandleAdminSet)
 	teleBot.Handle("/listusers", bot.HandleAdminListUsers)
 	teleBot.Handle("/removeuser", bot.HandleAdminRemoveUser)
+	teleBot.Handle("/adduser", bot.HandleAdminAddUser)
+	teleBot.Handle("/addcurrency", bot.HandleAdminAddCurrency)
+	teleBot.Handle("/setdefaultcurrency", bot.HandleAdminSetDefaultCurrency)
 	logger.Info("Bot handlers set up")
 
 	// Initialize WebApp

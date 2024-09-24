@@ -1,21 +1,45 @@
 package views
 
 import (
-    "github.com/fitz123/mcduck-wallet/pkg/models"
+    "github.com/fitz123/mcduck-wallet/pkg/database"
     "fmt"
-    "math"
 )
 
-templ TransactionHistory(transactions []models.TransactionJSON) {
+templ TransactionHistory(transactions []database.Transaction) {
     @showBackButton()
-    @historyStyles()
-
-    <div class="container">
+    <main>
         <h2>Transaction History</h2>
         for _, t := range transactions {
             @transactionItem(t)
         }
-    </div>
+        <div>
+            <button hx-get="/" hx-target="body">
+                Back to Balances
+            </button>
+        </div>
+    </main>
+}
+
+templ transactionItem(t database.Transaction) {
+    <article style="display: flex; justify-content: space-between; align-items: center; ">
+        <!-- Left side: from, to and date -->
+        <div>
+            <div>
+            <strong>
+                { trUsername(t.FromUsername) } → { trUsername(t.ToUsername) }
+            </strong>
+            </div>
+            <small class="secondary">
+                 { t.Timestamp.Format("2 Jan, 3:04 PM") }
+             </small>
+        </div>
+        <!-- Right side: amount -->
+        <div style="font-weight: bold;">
+            <strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
+                { fmt.Sprintf("%.0f", t.Amount) } { t.Balance.Currency.Code }
+            </strong>
+        </div>
+    </article>
 }
 
 templ showBackButton() {
@@ -28,89 +52,8 @@ templ showBackButton() {
     </script>
 }
 
-templ historyStyles() {
-    <style>
-        .transaction {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: var(--card-background);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: var(--box-shadow);
-            transition:
-                transform 0.2s ease,
-                box-shadow 0.2s ease;
-        }
-
-        .transaction:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .left-content {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .description {
-            font-weight: 500;
-            color: var(--text-color);
-            font-size: 20px;
-            margin-bottom: 5px;
-        }
-
-        .timestamp {
-            color: var(--text-muted-color);
-            font-size: 17px;
-        }
-
-        .amount {
-            font-weight: 500;
-            font-size: 24px;
-            text-align: right;
-            margin-top: 7px;
-        }
-
-        .received {
-            color: var(--success-color);
-        }
-
-        .sent {
-            color: var(--error-color);
-        }
-
-        .transaction-type {
-            color: var(--text-muted-color);
-            font-size: 18px;
-            text-align: right;
-        }
-    </style>
-}
-
-templ transactionItem(t models.TransactionJSON) {
-    <div class="transaction">
-        <div class="left-content">
-            <div class="description">
-                if t.Amount < 0 {
-                    To { truncateUsername(t.ToUsername) }
-                } else {
-                    From { truncateUsername(t.ToUsername) }
-                }
-            </div>
-            <div class="timestamp">{ t.Timestamp.Format("2 Jan, 3:04 PM") }</div>
-        </div>
-        <div class="right-content">
-            <div class={ "amount", ternary(t.Amount >= 0, "received", "sent") }>
-            { ternary(t.Amount >= 0, "+", "-") }{ fmt.Sprintf("%.0f", math.Abs(t.Amount)) }
-            </div>
-        </div>
-    </div>
-}
-
-func truncateUsername(username string) string {
-    maxLength := 18
+func trUsername(username string) string {
+    maxLength := 10
     if len(username) > maxLength {
         return username[:maxLength-3] + "..."
     }

@@ -1,6 +1,9 @@
 package database
 
 import (
+	"errors"
+	"fmt"
+	"log"
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/pkg/logger"
@@ -12,23 +15,32 @@ type User struct {
 	gorm.Model
 	TelegramID   int64 `gorm:"uniqueIndex"`
 	Username     string
-	Balance      float64
-	CurrencyID   uint
-	Currency     Currency
+	Accounts     []Balance
 	IsAdmin      bool `gorm:"default:false"`
 	Transactions []Transaction
 }
 
-type Transaction struct {
+type Balance struct {
 	gorm.Model
 	UserID     uint
 	Amount     float64
 	CurrencyID uint
 	Currency   Currency
-	Type       string
-	ToUserID   *uint
-	ToUsername string
-	Timestamp  time.Time
+}
+
+type Transaction struct {
+	gorm.Model
+	UserID       uint
+	BalanceID    uint
+	Balance      Balance
+	Amount       float64
+	Type         string
+	FromUserID   uint
+	FromUsername string
+	ToUserID     uint
+	ToUsername   string
+	Timestamp    time.Time
+	BalanceAfter float64 // Balance after the transaction for the user
 }
 
 type Currency struct {
@@ -49,34 +61,15 @@ func InitDB() {
 	}
 
 	// Auto Migrate the schema
-	err = DB.AutoMigrate(&Currency{}, &User{}, &Transaction{})
+	err = DB.AutoMigrate(&Currency{}, &User{}, &Transaction{}, &Balance{})
 	if err != nil {
 		logger.Error("Failed to migrate database:", err)
 	}
 
-	EnsureDefaultCurrency()
-}
-
-func EnsureDefaultCurrency() {
-	var defaultCurrency Currency
-	if err := DB.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			defaultCurrency = Currency{
-				Code:      "SHL",
-				Name:      "ϣƛöƞȡρƐρ(øʋ)",
-				Sign:      "¤",
-				IsDefault: true,
-			}
-			if err := DB.Create(&defaultCurrency).Error; err != nil {
-				logger.Error("Failed to create default currency:", err)
-			} else {
-				logger.Info("Created default currency", "id", defaultCurrency.ID)
-			}
-		} else {
-			logger.Error("Error checking for default currency:", err)
-		}
-	} else {
-		logger.Debug("Default currency exists", "id", defaultCurrency.ID)
+	// Create default currency if it doesn't exist
+	if err := CreateDefaultCurrencyIfNotExists(); err != nil {
+		logger.Error("Failed to create default currency", "error", err)
+		log.Fatal(err)
 	}
 }
 
@@ -86,10 +79,38 @@ func GetDefaultCurrency() (Currency, error) {
 	return currency, err
 }
 
-func (c *Currency) BeforeCreate(tx *gorm.DB) error {
-	if c.IsDefault {
-		// Set all other currencies to non-default
-		tx.Model(&Currency{}).Where("is_default = ?", true).Update("is_default", false)
+func GetCurrencyByCode(code string) (Currency, error) {
+	var currency Currency
+	result := DB.Where("code = ?", code).First(&currency)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return Currency{}, fmt.Errorf("currency not found: %s", code)
+		}
+		return Currency{}, result.Error
 	}
+	return currency, nil
+}
+
+func CreateDefaultCurrencyIfNotExists() error {
+	var count int64
+	DB.Model(&Currency{}).Count(&count)
+	if count > 0 {
+		logger.Info("Default currency already exists, skipping creation")
+		return nil
+	}
+
+	defaultCurrency := Currency{
+		Code:      "SHL",
+		Name:      "ϣƛöƞȡρƐρ(øʋ)",
+		Sign:      "¤",
+		IsDefault: true,
+	}
+
+	if err := DB.Create(&defaultCurrency).Error; err != nil {
+		logger.Error("Failed to create default currency", "error", err)
+		return err
+	}
+
+	logger.Info("Default currency created", "code", defaultCurrency.Code, "name", defaultCurrency.Name)
 	return nil
 }

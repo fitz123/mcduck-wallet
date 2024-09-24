@@ -19,11 +19,12 @@ var (
 	ErrNegativeAmount       = errors.New(messages.ErrNegativeAmount)
 	ErrCannotTransferToSelf = errors.New(messages.ErrCannotTransferToSelf)
 	ErrCurrencyMismatch     = errors.New(messages.ErrCurrencyMismatch)
+	ErrCurrencyNotExist     = errors.New(messages.ErrCurrencyNotExist)
 )
 
 func GetUser(telegramID int64) (*database.User, error) {
 	var user database.User
-	result := database.DB.Preload("Currency").Where("telegram_id = ?", telegramID).First(&user)
+	result := database.DB.Preload("Accounts.Currency").Where("telegram_id = ?", telegramID).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
@@ -32,47 +33,32 @@ func GetUser(telegramID int64) (*database.User, error) {
 		return nil, result.Error
 	}
 
-	if user.CurrencyID == 0 || user.Currency.ID == 0 {
-		defaultCurrency, err := database.GetDefaultCurrency()
-		if err != nil {
-			logger.Error("Failed to get default currency", "error", err)
-			return nil, err
-		}
-
-		user.CurrencyID = defaultCurrency.ID
-		user.Currency = defaultCurrency
-
-		// Update the user in the database
-		if err := database.DB.Model(&user).Update("currency_id", defaultCurrency.ID).Error; err != nil {
-			logger.Error("Failed to update user currency", "error", err, "telegramID", telegramID)
-		}
-
-		logger.Info("Updated user with default currency", "telegramID", telegramID, "currencyID", defaultCurrency.ID)
-	}
-
-	logger.Debug("User fetched",
+	logger.Debug(
+		"User fetched",
 		"telegramID", user.TelegramID,
 		"username", user.Username,
-		"balance", user.Balance,
-		"currencyID", user.CurrencyID,
-		"currencyCode", user.Currency.Code,
-		"currencySign", user.Currency.Sign)
+		"Accounts", user.Accounts,
+	)
 
 	return &user, nil
 }
 
 func CreateUser(telegramID int64, username string) (*database.User, error) {
-	var defaultCurrency database.Currency
-	if err := database.DB.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
-		logger.Error("Failed to get default currency", "error", err)
+	defaultCurrency, err := database.GetDefaultCurrency()
+	if err != nil {
 		return nil, err
 	}
 
 	user := database.User{
 		TelegramID: telegramID,
 		Username:   username,
-		Balance:    0,
-		CurrencyID: defaultCurrency.ID,
+		Accounts: []database.Balance{
+			{
+				Amount:     0,
+				CurrencyID: defaultCurrency.ID,
+				Currency:   defaultCurrency,
+			},
+		},
 	}
 
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -80,7 +66,7 @@ func CreateUser(telegramID int64, username string) (*database.User, error) {
 		return nil, err
 	}
 
-	logger.Info("New user created", "telegramID", telegramID, "username", username, "currencyID", user.CurrencyID)
+	logger.Info("New user created", "telegramID", telegramID, "username", username)
 	return &user, nil
 }
 
@@ -97,56 +83,79 @@ func UpdateUsername(telegramID int64, username string) error {
 	return nil
 }
 
-func transferMoney(fromUserID, toUserID int64, amount float64) error {
-	if amount <= 0 {
-		return ErrNegativeAmount
+func transferMoney(fromUser, toUser *database.User, amount float64, currencyCode string) error {
+	var fromBalance, toBalance *database.Balance
+
+	// Find the correct balance for each user
+	for i := range fromUser.Accounts {
+		if fromUser.Accounts[i].Currency.Code == currencyCode {
+			fromBalance = &fromUser.Accounts[i]
+			break
+		}
+	}
+	for i := range toUser.Accounts {
+		if toUser.Accounts[i].Currency.Code == currencyCode {
+			toBalance = &toUser.Accounts[i]
+			break
+		}
 	}
 
-	// Prevent self-transfer
-	if fromUserID == toUserID {
+	// Check for errors
+	if fromUser.ID == toUser.ID {
 		return ErrCannotTransferToSelf
 	}
+	if fromBalance == nil || toBalance == nil {
+		return ErrCurrencyNotExist
+	}
+	if fromBalance.Amount < amount {
+		return ErrInsufficientBalance
+	}
+	if amount < 0 {
+		return ErrNegativeAmount
+	}
+	if fromBalance.CurrencyID != toBalance.CurrencyID {
+		return ErrCurrencyMismatch
+	}
 
+	// Perform the transfer
+	fromBalance.Amount -= amount
+	toBalance.Amount += amount
+
+	// Create transactions
+	now := time.Now()
+	fromTransaction := database.Transaction{
+		UserID:       fromUser.ID,
+		BalanceID:    fromBalance.ID,
+		Balance:      *fromBalance,
+		Amount:       -amount,
+		Type:         "transfer_out",
+		FromUserID:   fromUser.ID,
+		FromUsername: fromUser.Username,
+		ToUserID:     toUser.ID,
+		ToUsername:   toUser.Username,
+		Timestamp:    now,
+		BalanceAfter: fromBalance.Amount,
+	}
+	toTransaction := database.Transaction{
+		UserID:       toUser.ID,
+		BalanceID:    toBalance.ID,
+		Balance:      *toBalance,
+		Amount:       amount,
+		Type:         "transfer_in",
+		FromUserID:   fromUser.ID,
+		FromUsername: fromUser.Username,
+		ToUserID:     toUser.ID,
+		ToUsername:   toUser.Username,
+		Timestamp:    now,
+		BalanceAfter: toBalance.Amount,
+	}
+
+	// Save everything to the database
 	return database.DB.Transaction(func(tx *gorm.DB) error {
-		var fromUser, toUser database.User
-
-		if err := tx.Where("telegram_id = ?", fromUserID).First(&fromUser).Error; err != nil {
-			return ErrUserNotFound
-		}
-
-		if fromUser.Balance < amount {
-			return ErrInsufficientBalance
-		}
-
-		if err := tx.Where("telegram_id = ?", toUserID).First(&toUser).Error; err != nil {
-			return ErrUserNotFound
-		}
-
-		fromUser.Balance -= amount
-		toUser.Balance += amount
-
-		now := time.Now()
-		fromTransaction := database.Transaction{
-			UserID:     fromUser.ID,
-			Amount:     -amount,
-			Type:       "transfer",
-			ToUserID:   &toUser.ID,
-			ToUsername: toUser.Username,
-			Timestamp:  now,
-		}
-		toTransaction := database.Transaction{
-			UserID:     toUser.ID,
-			Amount:     amount,
-			Type:       "transfer",
-			ToUserID:   &fromUser.ID,
-			ToUsername: fromUser.Username,
-			Timestamp:  now,
-		}
-
-		if err := tx.Save(&fromUser).Error; err != nil {
+		if err := tx.Save(fromBalance).Error; err != nil {
 			return err
 		}
-		if err := tx.Save(&toUser).Error; err != nil {
+		if err := tx.Save(toBalance).Error; err != nil {
 			return err
 		}
 		if err := tx.Create(&fromTransaction).Error; err != nil {
@@ -155,7 +164,6 @@ func transferMoney(fromUserID, toUserID int64, amount float64) error {
 		if err := tx.Create(&toTransaction).Error; err != nil {
 			return err
 		}
-
 		return nil
 	})
 }
@@ -167,9 +175,39 @@ func getTransactionHistory(userID int64) ([]database.Transaction, error) {
 	}
 
 	var transactions []database.Transaction
-	if err := database.DB.Where("user_id = ?", user.ID).Order("timestamp desc").Limit(10).Find(&transactions).Error; err != nil {
+	if err := database.DB.Where("user_id = ?", user.ID).
+		Preload("Balance.Currency"). // Preload the Currency information
+		Order("timestamp desc").
+		Limit(10).
+		Find(&transactions).Error; err != nil {
+		logger.Error("Failed to get transaction history", "error", err, "userID", userID)
 		return nil, err
 	}
 
+	logger.Info("Retrieved transaction history", "userID", userID, "transactionCount", len(transactions))
 	return transactions, nil
+}
+
+func GetUserByUsername(username string) (*database.User, error) {
+	var user database.User
+	result := database.DB.Preload("Accounts.Currency").Where("username = ?", username).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func GetUsernameByTelegramID(telegramID int64) (string, error) {
+	var user database.User
+	result := database.DB.Where("telegram_id = ?", telegramID).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return "", ErrUserNotFound
+		}
+		return "", result.Error
+	}
+	return user.Username, nil
 }

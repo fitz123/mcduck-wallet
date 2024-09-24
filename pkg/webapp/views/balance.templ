@@ -5,10 +5,23 @@ import (
     "github.com/fitz123/mcduck-wallet/pkg/database"
 )
 
-templ Balance(balance float64, currency database.Currency) {
-        <div class="balance-amount">
-            <span class="currency-sign">{ currency.Sign }</span>
-            <span class="balance-amount">{ fmt.Sprintf("%.0f", balance) }</span>
-        </div>
-        <span class="currency-name">{ currency.Name }</span>
+type BalanceWithCurrency struct {
+    Amount   float64
+    Currency database.Currency
+}
+
+templ Balances(balances []BalanceWithCurrency) {
+    <div>
+        for _, balance := range balances {
+            <article>
+                <div style="display: flex; justify-content: space-between;">
+                    <div>{ balance.Currency.Name }</div>
+                    <div><strong>
+                        { balance.Currency.Sign }
+                        { fmt.Sprintf("%.0f", balance.Amount) }
+                    </strong></div>
+                </div>
+            </article>
+        }
+    </div>
 }

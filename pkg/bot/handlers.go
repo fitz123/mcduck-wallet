@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/fitz123/mcduck-wallet/pkg/core"
+	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/pkg/logger"
 	"github.com/fitz123/mcduck-wallet/pkg/messages"
 	tele "gopkg.in/telebot.v3"
 )
@@ -60,42 +62,57 @@ func HandleStart(c tele.Context) error {
 		},
 	}
 
-	return c.Send(fmt.Sprintf(messages.InfoWelcome, user.Username, user.Balance), keyboard)
+	return c.Send(fmt.Sprintf(messages.InfoWelcome, user.Username), keyboard)
 }
 
 func HandleBalance(c tele.Context) error {
 	ctx := &botContext{c}
-	balance, currency, err := core.GetBalance(ctx)
+	balances, err := core.GetBalance(ctx)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Error: %v", err))
 	}
 
-	// Format the balance with the currency
-	formattedBalance := fmt.Sprintf("Your current balance is %s %.2f %s",
-		currency.Sign, balance, currency.Name)
+	var formattedBalances []string
+	for currencyCode, balance := range balances {
+		currency, err := database.GetCurrencyByCode(currencyCode)
+		if err != nil {
+			logger.Error("Failed to get currency", "error", err, "currencyCode", currencyCode)
+			continue
+		}
+		formattedBalance := fmt.Sprintf("%s%.2f %s", currency.Sign, balance, currency.Name)
+		formattedBalances = append(formattedBalances, formattedBalance)
+	}
 
-	return c.Send(formattedBalance)
+	response := "Your current balances:\n" + strings.Join(formattedBalances, "\n")
+	return c.Send(response)
 }
 
 func HandleTransfer(c tele.Context) error {
 	ctx := &botContext{c}
 	args := c.Args()
-	if len(args) != 2 {
+	if len(args) < 2 || len(args) > 3 {
 		return c.Send(messages.UsageTransfer)
 	}
 
-	toUser := args[0]
+	defaultCurrency, err := database.GetDefaultCurrency()
+	currencyCode := defaultCurrency.Code
+
+	if len(args) == 3 {
+		currencyCode = strings.ToUpper(args[2])
+	}
+
+	toUsername := strings.TrimPrefix(args[0], "@")
 	amount, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
 		return c.Send(messages.ErrInvalidAmount)
 	}
 
-	err = core.TransferMoney(ctx, args[0], amount)
+	err = core.TransferMoney(ctx, toUsername, amount, currencyCode)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Transfer failed: %v", err))
 	}
 
-	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, toUser))
+	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, currencyCode, toUsername))
 }
 
 func HandleHistory(c tele.Context) error {
