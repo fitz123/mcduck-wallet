@@ -12,188 +12,83 @@ templ Index() {
 
 templ style() {
     <style>
-        /* Root variables for colors and fonts */
-        :root {
-            --primary-color: #4a90e2;
-            --background-color: #f5f7fa;
-            --card-background: #ffffff;
-            --text-color: #4f4f4f;
-            --text-muted-color: #777777;
-            --success-color: #66e784;
-            --error-color: #f48377;
-            --border-radius: 8px;
-            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            --font-family: "Roboto", sans-serif;
-        }
+         /* Customize Pico CSS variables if needed */
+         :root {
+             /* Example: Customize primary color */
+             /* --pico-primary: #0172ad; */ /* Default value */
+             /* --pico-primary: #0172ad; */ /* Default value */
+             /* --pico-primary-hover: #015887; */
+             /* You can uncomment and change these values to customize the theme */
+         }
 
-        h2 {
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 18px;
-        }
-
-        body {
-            font-family: var(--font-family);
-            margin: 0;
-            padding: 20px;
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-
-        .balance-section,
-        .transaction-history {
-            background-color: var(--card-background);
-            padding: 20px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            margin-bottom: 20px;
-        }
-
-        .balance-section {
-            text-align: center;
-        }
-
-        .total-balance {
-            font-size: 16px;
-            color: var(--text-muted-color);
-            margin-bottom: 10px;
-            font-weight: 500;
-        }
-
-        .balance-amount {
-            font-size: 42px;
-            font-weight: 700;
-            margin-bottom: 5px;
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .currency-sign {
-            color: var(--text-muted-color);
-            font-size: 32px; /* Adjust this value as needed */
-            margin-right: 2px; /* Add a small space between sign and amount */
-            position: relative;
-            top: -2px; /* Fine-tune vertical alignment if necessary */
-        }
-
-        .currency-name {
-            font-size: 14px;
-            color: var(--text-muted-color);
-        }
-
-        .send-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: background-color 0.2s ease;
-        }
-
-        .send-btn:hover {
-            background-color: #357abd;
-        }
-
-        .transaction-history {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            justify-content: center;
-        }
-
-        .transaction-history-icon {
-            margin-right: 10px;
-            font-size: 24px;
-            color: var(--primary-color);
-        }
-
-        .transfer-form {
-            display: none;
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .input {
-            width: 100%;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            border: 1px solid #dddfe2;
-            border-radius: var(--border-radius);
-            font-size: 16px;
-            font-family: var(--font-family);
-            box-sizing: border-box;
-        }
-
-        .message {
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: var(--border-radius);
-            font-size: 16px;
-        }
-
-        .success {
-            color: var(--success-color);
-            background-color: #e6f3e6;
-            border: 1px solid var(--success-color);
-        }
-
-        .error {
-            color: var(--error-color);
-            background-color: #fce8e6;
-            border: 1px solid var(--error-color);
-        }
-    </style>
+         /* Use Pico CSS variables for success and error text colors */
+         .text-success {
+             color: var(--pico-ins-color); /* Greenish color for positive amounts */
+         }
+         .text-error {
+             color: var(--pico-del-color); /* Reddish color for negative amounts */
+         }
+     </style>
 }
+
 
 templ head() {
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>McDuck Wallet WebApp</title>
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+        <meta name="color-scheme" content="light dark">
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.pink.min.css"
+        >
         <script src="https://unpkg.com/htmx.org@2.0.2" integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ" crossorigin="anonymous"></script>
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
     </head>
 }
 
 templ tgInit() {
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOMContentLoaded event fired");
-
         let tg = window.Telegram.WebApp;
-        console.log("Telegram WebApp object:", tg);
         tg.expand();
         tg.BackButton.hide();
 
+        // Set the color scheme to match the user's theme
+        const theme = tg.colorScheme; // "light" or "dark"
+        document.documentElement.setAttribute('data-theme', theme);
+
         // Add the Telegram initData to the request as a header
         htmx.on("htmx:configRequest", (e) => {
-            console.log("Setting Telegram init data");
             e.detail.headers["X-Telegram-Init-Data"] = tg.initData;
         });
+
+        // Manage loading state
+
+
+        htmx.on('htmx:afterOnLoad', function(evt) {
+            const balanceContainer = document.getElementById('balance-container');
+            balanceContainer.setAttribute('aria-busy', 'false');
+        });
+
+        tg.ready();
     });
     </script>
 }
 
 templ indexBody() {
     <body>
-        <div class="balance-section" id="balance-section">
-        <div class="total-balance">Total Balance</div>
-            <div hx-get="/balance" hx-trigger="intersect">
-                Loading balance...
+        <main style="display: flex; flex-direction: column; min-height: 100vh;">
+            <h2>Your Balances</h2>
+            <!-- Loading message and balances section -->
+            <div id="balance-container" hx-get="/balance" hx-trigger="intersect once" aria-busy="true">
             </div>
-        </div>
-        <button class="transaction-history">
-            <div hx-get="/history" hx-target="body">
-                Transaction history
+            <div style="flex-grow: 1;"></div>
+            <div style="text-align: center;">
+                <button hx-get="/history" hx-target="body">
+                    Transaction History
+                </button>
             </div>
-        </button>
+        </main>
     </body>
 }
