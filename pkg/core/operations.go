@@ -12,19 +12,19 @@ type OperationContext interface {
 	GetUserID() int64
 }
 
-func GetBalance(ctx OperationContext) (map[string]float64, error) {
+type BalanceWithCurrency struct {
+	Amount   float64
+	Currency database.Currency
+}
+
+func GetBalance(ctx OperationContext) ([]database.Balance, error) {
 	user, err := GetUser(ctx.GetUserID())
 	if err != nil {
 		logger.Error("Failed to get user", "error", err, "userID", ctx.GetUserID())
 		return nil, err
 	}
 
-	balances := make(map[string]float64)
-	for _, account := range user.Accounts {
-		balances[account.Currency.Code] = account.Amount
-	}
-
-	return balances, nil
+	return user.Accounts, nil
 }
 
 // TransferMoney is the public API for transferring money between users

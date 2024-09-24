@@ -14,7 +14,7 @@ const (
 	ErrCurrencyNotExist     = "Currency does not supported"
 
 	// Info messages
-	InfoTransferSuccessful = "Successfully transferred %f.0f %s to @%s"
+	InfoTransferSuccessful = "Successfully transferred %.0f %s to @%s"
 	InfoWelcome            = "Welcome to McDuck Wallet, @%s! Your personal finance assistant.\nUse the button below to open the WebApp."
 	InfoNoTransactions     = "No transactions found."
 

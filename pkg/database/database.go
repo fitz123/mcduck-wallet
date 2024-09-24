@@ -91,6 +91,12 @@ func GetCurrencyByCode(code string) (Currency, error) {
 	return currency, nil
 }
 
+func GetAllCurrencies() ([]Currency, error) {
+	var currencies []Currency
+	err := DB.Find(&currencies).Error
+	return currencies, err
+}
+
 func CreateDefaultCurrencyIfNotExists() error {
 	var count int64
 	DB.Model(&Currency{}).Count(&count)

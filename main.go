@@ -55,6 +55,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/balance", webapp.AuthMiddleware(webapp.GetBalance))
 	mux.HandleFunc("/transfer", webapp.AuthMiddleware(webapp.TransferMoney))
+	mux.HandleFunc("/transfer-form", webapp.AuthMiddleware(webapp.GetTransferForm)) // New route
 	mux.HandleFunc("/history", webapp.AuthMiddleware(webapp.GetTransactionHistory))
 	mux.HandleFunc("/", webapp.ServeHTML)
 	logger.Info("WebApp routes set up")
