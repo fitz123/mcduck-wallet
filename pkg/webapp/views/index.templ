@@ -1,26 +1,17 @@
 package views
 
-templ Index() {
+templ Index(alertMessage string, isSuccess bool) {
     <!DOCTYPE html>
     <html lang="en">
         @head()
         @tgInit()
         @style()
-        @indexBody()
+        @indexBody(alertMessage, isSuccess)
     </html>
 }
 
 templ style() {
     <style>
-         /* Customize Pico CSS variables if needed */
-         :root {
-             /* Example: Customize primary color */
-             /* --pico-primary: #0172ad; */ /* Default value */
-             /* --pico-primary: #0172ad; */ /* Default value */
-             /* --pico-primary-hover: #015887; */
-             /* You can uncomment and change these values to customize the theme */
-         }
-
          /* Use Pico CSS variables for success and error text colors */
          .text-success {
              color: var(--pico-ins-color); /* Greenish color for positive amounts */
@@ -28,7 +19,26 @@ templ style() {
          .text-error {
              color: var(--pico-del-color); /* Reddish color for negative amounts */
          }
-     </style>
+         .alert-success {
+              background-color: var(--pico-ins-background);
+              border-color: var(--pico-ins-border);
+              color: var(--pico-ins-color);
+              border-radius: var(--pico-border-radius);
+          }
+          .alert-error {
+              background-color: var(--pico-del-background);
+              border-color: var(--pico-del-border);
+              color: var(--pico-del-color);
+              border-radius: var(--pico-border-radius);
+          }
+           /* Ensure main container doesn't shift */
+           main {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: 100vh;
+            }
+    </style>
 }
 
 
@@ -64,27 +74,36 @@ templ tgInit() {
         });
 
         // Manage loading state
-
-
         htmx.on('htmx:afterOnLoad', function(evt) {
             const balanceContainer = document.getElementById('balance-container');
             balanceContainer.setAttribute('aria-busy', 'false');
         });
+
+        // Scroll to top after successful HTMX submission
+         htmx.on("htmx:beforeRequest", function(evt) {
+             window.scrollTo({ top: 0, behavior: 'auto' });
+         });
 
         tg.ready();
     });
     </script>
 }
 
-templ indexBody() {
+templ indexBody(alertMessage string, isSuccess bool) {
     <body>
-        <main style="display: flex; flex-direction: column; min-height: 100vh;">
+        <main>
             <h2>Your Balances</h2>
-            <!-- Loading message and balances section -->
-            <div id="balance-container" hx-get="/balance" hx-trigger="intersect once" aria-busy="true">
+            <div id="balance-container" aria-busy="true"
+                 hx-get="/balance" hx-trigger="intersect once">
             </div>
+            if alertMessage != "" {
+                @TransferAlert(alertMessage, isSuccess)
+            }
             <div style="flex-grow: 1;"></div>
             <div style="text-align: center;">
+                <button hx-get="/transfer-form" hx-target="body">
+                    Transfer Money
+                </button>
                 <button hx-get="/history" hx-target="body">
                     Transaction History
                 </button>

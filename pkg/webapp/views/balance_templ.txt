@@ -1,6 +1,0 @@
-<div>
-<article><div style=\"display: flex; justify-content: space-between;\"><div>
-</div><div><strong>
- 
-</strong></div></div></article>
-</div>

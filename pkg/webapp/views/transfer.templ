@@ -1,0 +1,46 @@
+// File: pkg/webapp/views/transfer.templ
+package views
+
+import (
+    "fmt"
+    "github.com/fitz123/mcduck-wallet/pkg/database"
+)
+
+templ TransferForm(balances []database.Balance) {
+    @showBackButton()
+    <article>
+        <header>
+            <h2>Transfer Form</h2>
+        </header>
+
+        <form hx-post="/transfer" hx-target="body" hx-confirm="Are you sure you want to make this transfer?">
+            <label for="to_username">
+                Recipient Username
+                <input type="text" id="to_username" name="to_username" placeholder="@username" required />
+            </label>
+
+            <label for="amount">
+                Amount
+                <input type="number" id="amount" name="amount" min="1" step="1" required />
+            </label>
+
+            <label for="currency">
+                Currency
+                <select id="currency" name="currency" required>
+                    for _, balance := range balances {
+                        <option value={ balance.Currency.Code }>
+                            { balance.Currency.Name } ({ balance.Currency.Code }) - Balance: { fmt.Sprintf("%.0f", balance.Amount) }
+                        </option>
+                    }
+                </select>
+            </label>
+            <button type="submit" >Confirm Transfer</button>
+        </form>
+    </article>
+}
+
+templ TransferAlert(message string, isSuccess bool) {
+    <div role="alert" class={ ternary(isSuccess, "alert-success", "alert-error") }>
+        { message }
+    </div>
+}

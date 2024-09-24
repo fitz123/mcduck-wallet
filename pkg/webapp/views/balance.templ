@@ -5,12 +5,7 @@ import (
     "github.com/fitz123/mcduck-wallet/pkg/database"
 )
 
-type BalanceWithCurrency struct {
-    Amount   float64
-    Currency database.Currency
-}
-
-templ Balances(balances []BalanceWithCurrency) {
+templ Balances(balances []database.Balance) {
     <div>
         for _, balance := range balances {
             <article>
