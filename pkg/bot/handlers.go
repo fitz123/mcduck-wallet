@@ -73,13 +73,14 @@ func HandleBalance(c tele.Context) error {
 	}
 
 	var formattedBalances []string
-	for currencyCode, balance := range balances {
+	for _, balance := range balances {
+		currencyCode := balance.Currency.Code
 		currency, err := database.GetCurrencyByCode(currencyCode)
 		if err != nil {
 			logger.Error("Failed to get currency", "error", err, "currencyCode", currencyCode)
 			continue
 		}
-		formattedBalance := fmt.Sprintf("%s%.2f %s", currency.Sign, balance, currency.Name)
+		formattedBalance := fmt.Sprintf("%s%.0f %s", currency.Sign, balance.Amount, currency.Name)
 		formattedBalances = append(formattedBalances, formattedBalance)
 	}
 
