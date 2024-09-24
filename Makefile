@@ -1,14 +1,57 @@
-BINARY_NAME=mkduck-wallet
+# Variables
+BINARY_NAME := mcduck-wallet
+REMOTE_SERVER := mcduck
+REMOTE_BINARY := ~/mcduck-wallet/bin/$(BINARY_NAME)
+LDFLAGS := '-linkmode external -extldflags "-static" -s -w'
 
-.PHONY: build run
+# Phony targets
+.PHONY: all build transfer deploy clean test run help
+
+# Default target
+all: build transfer clean
+
+# Build the binary
+build:
+	@echo "Building binary..."
+	@mkdir -p bin
+	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-cc \
+	go build -ldflags $(LDFLAGS) -o bin/$(BINARY_NAME) main.go
+
+# Transfer the binary to the remote server
+transfer: build
+	@echo "Transferring the binary to the remote server..."
+	command scp ./bin/$(BINARY_NAME) $(REMOTE_SERVER):$(REMOTE_BINARY).tmp
+
+# Deploy the application
+deploy: transfer
+	@echo "Restarting the application on the remote server..."
+	command ssh $(REMOTE_SERVER) 'pkill $(BINARY_NAME) || true; mv $(REMOTE_BINARY){.tmp,}; nohup $(REMOTE_BINARY) > /dev/null 2>&1 &'
+	@echo "Deployment complete."
+
+# Clean up
+clean:
+	@echo "Cleaning up..."
+	rm -rf bin
+
+# Run tests
 test:
+	@echo "Running tests..."
 	go test ./... -count=1
 
-build:
-	@echo "Building the app..."
-	mkdir -p bin
-	go build -o bin/$(BINARY_NAME) main.go
-
+# Run the application locally
 run:
-	 @echo "Running the app..."
-	sudo -E ./bin/$(BINARY_NAME)
+	@echo "Running the app..."
+	go run main.go
+
+# Print help information
+help:
+	@echo "Available targets:"
+	@echo "  all        - Build, transfer, and clean (default)"
+	@echo "  build      - Build the binary"
+	@echo "  transfer   - Transfer the binary to the remote server"
+	@echo "  deploy     - Deploy the application to the remote server"
+	@echo "  clean      - Remove the bin directory"
+	@echo "  test       - Run the test suite"
+	@echo "  run        - Run the application locally"
+	@echo "  help       - Print this help information"
+
