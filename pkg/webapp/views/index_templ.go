@@ -165,7 +165,7 @@ func indexBody(alertMessage string, isSuccess bool) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<body><main><h2>Your Balances</h2><!-- Loading message and balances section --><div id=\"balance-container\" hx-get=\"/balance\" hx-trigger=\"intersect once\" aria-busy=\"true\"></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<body><main><article><header><h2>Your Balances</h2></header><div id=\"balance-container\" aria-busy=\"true\" hx-get=\"/balance\" hx-trigger=\"intersect once\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -175,7 +175,7 @@ func indexBody(alertMessage string, isSuccess bool) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div style=\"flex-grow: 1;\"></div><div style=\"text-align: center;\"><button hx-get=\"/transfer-form\" hx-target=\"body\">Transfer Money</button> <button hx-get=\"/history\" hx-target=\"body\">Transaction History</button></div></main></body>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div style=\"flex-grow: 1;\"></div><div style=\"text-align: center;\"><button hx-get=\"/transfer-form\" hx-target=\"body\">Transfer Money</button> <button hx-get=\"/history\" hx-target=\"body\">Transaction History</button></div></article></main></body>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

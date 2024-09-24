@@ -8,6 +8,7 @@ import (
 
 templ TransferForm(balances []database.Balance) {
     @showBackButton()
+    <main>
     <article>
         <header>
             <h2>Transfer Form</h2>
@@ -37,6 +38,7 @@ templ TransferForm(balances []database.Balance) {
             <button type="submit" >Confirm Transfer</button>
         </form>
     </article>
+    </main>
 }
 
 templ TransferAlert(message string, isSuccess bool) {
