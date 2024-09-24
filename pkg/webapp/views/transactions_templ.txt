@@ -1,12 +1,11 @@
-<div class=\"container\"><h2>Transaction History</h2>
-</div>
-<script>\n    let tg = window.Telegram.WebApp;\n    tg.BackButton.show();\n    tg.BackButton.onClick(() => {\n        window.location.href = \"/\";\n    });\n    </script>
-<style>\n        .transaction {\n            display: flex;\n            justify-content: space-between;\n            align-items: center;\n            background-color: var(--card-background);\n            border-radius: var(--border-radius);\n            padding: 20px;\n            margin-bottom: 15px;\n            box-shadow: var(--box-shadow);\n            transition:\n                transform 0.2s ease,\n                box-shadow 0.2s ease;\n        }\n\n        .transaction:hover {\n            transform: translateY(-2px);\n            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);\n        }\n\n        .left-content {\n            display: flex;\n            flex-direction: column;\n        }\n\n        .description {\n            font-weight: 500;\n            color: var(--text-color);\n            font-size: 20px;\n            margin-bottom: 5px;\n        }\n\n        .timestamp {\n            color: var(--text-muted-color);\n            font-size: 17px;\n        }\n\n        .amount {\n            font-weight: 500;\n            font-size: 24px;\n            text-align: right;\n            margin-top: 7px;\n        }\n\n        .received {\n            color: var(--success-color);\n        }\n\n        .sent {\n            color: var(--error-color);\n        }\n\n        .transaction-type {\n            color: var(--text-muted-color);\n            font-size: 18px;\n            text-align: right;\n        }\n    </style>
-<div class=\"transaction\"><div class=\"left-content\"><div class=\"description\">
-To 
-From 
-</div><div class=\"timestamp\">
-</div></div><div class=\"right-content\">
-<div class=\"
+<main><h2>Transaction History</h2>
+<div><button hx-get=\"/\" hx-target=\"body\">Back to Balances</button></div></main>
+<article style=\"display: flex; justify-content: space-between; align-items: center; \"><!-- Left side: from, to and date --><div><div><strong>
+ → 
+</strong></div><small class=\"secondary\">
+</small></div><!-- Right side: amount --><div style=\"font-weight: bold;\">
+<strong class=\"
 \">
-</div></div></div>
+ 
+</strong></div></article>
+<script>\n    let tg = window.Telegram.WebApp;\n    tg.BackButton.show();\n    tg.BackButton.onClick(() => {\n        window.location.href = \"/\";\n    });\n    </script>

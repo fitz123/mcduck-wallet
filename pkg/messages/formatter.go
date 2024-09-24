@@ -5,34 +5,44 @@ package messages
 import (
 	"fmt"
 
-	"github.com/fitz123/mcduck-wallet/pkg/models"
+	"github.com/fitz123/mcduck-wallet/pkg/database"
 )
 
 // FormatTransactionHistory formats the transaction history for bot
-func FormatTransactionHistory(transactions []models.TransactionJSON) []string {
+func FormatTransactionHistory(transactions []database.Transaction) []string {
 	if len(transactions) == 0 {
 		return []string{InfoNoTransactions}
 	}
 
 	formattedTransactions := make([]string, len(transactions))
-
 	for i, t := range transactions {
 		var description string
+		var otherParty string
 
-		if t.Type == "transfer" {
-			if t.Amount < 0 {
-				description = fmt.Sprintf("Send to *%s*", truncateUsername(t.ToUsername))
-			} else {
-				description = fmt.Sprintf("Received from *%s*", truncateUsername(t.ToUsername))
-			}
-		} else {
+		switch t.Type {
+		case "transfer_out":
+			description = "Sent to"
+			otherParty = truncateUsername(t.ToUsername)
+		case "transfer_in":
+			description = "Received from"
+			otherParty = truncateUsername(t.FromUsername)
+		case "admin_set_balance":
+			description = "Set by admin"
+			otherParty = truncateUsername(t.FromUsername)
+		default:
 			description = "System Transaction"
+			otherParty = ""
 		}
 
-		formattedTransactions[i] = fmt.Sprintf("%s - %s %s%.2f",
-			t.Timestamp.Format("2006-01-02 15:04:05"),
+		if otherParty != "" {
+			description = fmt.Sprintf("%s *%s*", description, otherParty)
+		}
+
+		formattedTransactions[i] = fmt.Sprintf("%s - %s %s%.0f (Balance: %.0f)",
+			t.Timestamp.Format("2006-01-02 15:04"),
 			description,
-			t.CurrencySign, abs(t.Amount),
+			t.Balance.Currency.Sign, abs(t.Amount),
+			t.BalanceAfter,
 		)
 	}
 
@@ -49,7 +59,7 @@ func abs(x float64) float64 {
 
 // truncateUsername shortens long usernames and adds an ellipsis
 func truncateUsername(username string) string {
-	maxLength := 18
+	maxLength := 15
 	if len(username) > maxLength {
 		return username[:maxLength-3] + "..."
 	}
