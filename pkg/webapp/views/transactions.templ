@@ -1,68 +1,68 @@
 package views
 
 import (
-    "github.com/fitz123/mcduck-wallet/pkg/database"
-    "fmt"
+	"fmt"
+	"github.com/fitz123/mcduck-wallet/pkg/database"
 )
 
 templ TransactionHistory(transactions []database.Transaction) {
-    @showBackButton()
-    <main>
-        <h2>Transaction History</h2>
-        for _, t := range transactions {
-            @transactionItem(t)
-        }
-        <div>
-            <button hx-get="/" hx-target="body">
-                Back to Balances
-            </button>
-        </div>
-    </main>
+	@showBackButton()
+	<main>
+		<h2>Transaction History</h2>
+		for _, t := range transactions {
+			@transactionItem(t)
+		}
+		<div>
+			<button hx-get="/" hx-target="body">
+				Back to Balances
+			</button>
+		</div>
+	</main>
 }
 
 templ transactionItem(t database.Transaction) {
-    <article style="display: flex; justify-content: space-between; align-items: center; ">
-        <!-- Left side: from, to and date -->
-        <div>
-            <div>
-            <strong>
-                { trUsername(t.FromUsername) } → { trUsername(t.ToUsername) }
-            </strong>
-            </div>
-            <small class="secondary">
-                 { t.Timestamp.Format("2 Jan, 3:04 PM") }
-             </small>
-        </div>
-        <!-- Right side: amount -->
-        <div style="font-weight: bold;">
-            <strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
-                { fmt.Sprintf("%.0f", t.Amount) } { t.Balance.Currency.Code }
-            </strong>
-        </div>
-    </article>
+	<article style="display: flex; justify-content: space-between; align-items: center; ">
+		<!-- Left side: from, to and date -->
+		<div>
+			<div>
+				<strong>
+					{ trUsername(t.FromUsername) } → { trUsername(t.ToUsername) }
+				</strong>
+			</div>
+			<small class="secondary">
+				{ t.Timestamp.Format("2 Jan, 3:04 PM") }
+			</small>
+		</div>
+		<!-- Right side: amount -->
+		<div style="font-weight: bold;">
+			<strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
+				{ fmt.Sprintf("%.0f", t.Amount) } { t.Balance.Currency.Code }
+			</strong>
+		</div>
+	</article>
 }
 
 templ showBackButton() {
-    <script>
+	<script>
     let tg = window.Telegram.WebApp;
     tg.BackButton.show();
     tg.BackButton.onClick(() => {
-        window.location.href = "/";
+        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});
     });
     </script>
 }
 
 func trUsername(username string) string {
-    maxLength := 10
-    if len(username) > maxLength {
-        return username[:maxLength-3] + "..."
-    }
-    return username
+	maxLength := 10
+	if len(username) > maxLength {
+		return username[:maxLength-3] + "..."
+	}
+	return username
 }
 
 func ternary(condition bool, trueVal, falseVal string) string {
-    if condition {
-        return trueVal
-    }
-    return falseVal
+	if condition {
+		return trueVal
+	}
+	return falseVal
 }

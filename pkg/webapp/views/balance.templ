@@ -1,22 +1,32 @@
 package views
 
 import (
-    "fmt"
-    "github.com/fitz123/mcduck-wallet/pkg/database"
+	"fmt"
+	"github.com/fitz123/mcduck-wallet/pkg/database"
 )
 
 templ Balances(balances []database.Balance) {
-    <div>
-        for _, balance := range balances {
-            <article>
-                <div style="display: flex; justify-content: space-between;">
-                    <div>{ balance.Currency.Name }</div>
-                    <div><strong>
-                        { balance.Currency.Sign }
-                        { fmt.Sprintf("%.0f", balance.Amount) }
-                    </strong></div>
-                </div>
-            </article>
-        }
-    </div>
+	for _, balance := range balances {
+		<figure>
+			<table role="grid">
+				<thead>
+					<tr>
+						<th scope="col">Currency</th>
+						<th scope="col">Balance</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>{ balance.Currency.Name }</td>
+						<td>
+							<strong>
+								{ balance.Currency.Sign }
+								{ fmt.Sprintf("%.0f", balance.Amount) }
+							</strong>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</figure>
+	}
 }
