@@ -37,8 +37,6 @@ templ tgInit() {
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        tg.BackButton.hide();
-
         // Set the color scheme to match the user's theme
         const theme = tg.colorScheme; // "light" or "dark"
         document.documentElement.setAttribute('data-theme', theme);
@@ -49,9 +47,33 @@ templ tgInit() {
         });
 
         // Initial load of authenticated content
-        htmx.ajax('GET', '/balance', {target: '#main-content', swap: 'innerHTML'});
+        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});
 
         tg.ready();
+
+        // Function to update the back button based on the current page
+        function updateBackButton() {
+            const mainElement = document.querySelector('main');
+            if (mainElement) {
+                const page = mainElement.getAttribute('data-page');
+                if (page === 'main') {
+                    tg.BackButton.hide();
+                } else {
+                    tg.BackButton.show();
+                    tg.BackButton.onClick(() => {
+                        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});
+                    });
+                }
+            }
+        }
+
+        // Initial check
+        updateBackButton();
+
+        // Update back button after each content swap
+        htmx.on('htmx:afterSwap', () => {
+            updateBackButton();
+        });
     });
     </script>
 }
@@ -63,16 +85,14 @@ templ InitialLoadingIndex() {
 		@tgInit()
 		@style()
 		<body>
-			<main>
-				<div id="main-content"></div>
+			<main data-page="main">
 			</main>
 		</body>
 	</html>
 }
 
 templ MainContent(balances []database.Balance, alertMessage string, isSuccess bool) {
-	<main>
-		<div id="main-content">
+	<main data-page="main">
 			<header>
 				<h2>McDuck Wallet!</h2>
 			</header>
@@ -85,11 +105,10 @@ templ MainContent(balances []database.Balance, alertMessage string, isSuccess bo
 			<footer>
 				<nav>
 					<ul>
-						<li><button hx-get="/transfer-form" hx-target="#main-content">Transfer Money</button></li>
-						<li><button hx-get="/history" hx-target="#main-content">Transaction History</button></li>
+						<li><button hx-get="/transfer-form" hx-target="body">Transfer Money</button></li>
+						<li><button hx-get="/history" hx-target="body">Transaction History</button></li>
 					</ul>
 				</nav>
 			</footer>
-		</div>
 	</main>
 }

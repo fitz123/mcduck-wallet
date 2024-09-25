@@ -6,8 +6,7 @@ import (
 )
 
 templ TransactionHistory(transactions []database.Transaction) {
-	@showBackButton()
-	<main>
+	<main data-page="history">
 		<h2>Transaction History</h2>
 		for _, t := range transactions {
 			@transactionItem(t)
