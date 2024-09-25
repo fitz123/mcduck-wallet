@@ -41,27 +41,3 @@ templ transactionItem(t database.Transaction) {
 	</article>
 }
 
-templ showBackButton() {
-	<script>
-    let tg = window.Telegram.WebApp;
-    tg.BackButton.show();
-    tg.BackButton.onClick(() => {
-        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});
-    });
-    </script>
-}
-
-func trUsername(username string) string {
-	maxLength := 10
-	if len(username) > maxLength {
-		return username[:maxLength-3] + "..."
-	}
-	return username
-}
-
-func ternary(condition bool, trueVal, falseVal string) string {
-	if condition {
-		return trueVal
-	}
-	return falseVal
-}

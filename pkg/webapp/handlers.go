@@ -48,7 +48,7 @@ func GetTransferForm(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetBalance(w http.ResponseWriter, r *http.Request) {
+func GetDashboard(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r)
 	ctx := &webContext{r: r, userID: userID}
 
