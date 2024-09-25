@@ -85,30 +85,29 @@ templ InitialLoadingIndex() {
 		@tgInit()
 		@style()
 		<body>
-			<main data-page="main">
-			</main>
+			<main data-page="main"></main>
 		</body>
 	</html>
 }
 
 templ MainContent(balances []database.Balance, alertMessage string, isSuccess bool) {
 	<main data-page="main">
-			<header>
-				<h2>McDuck Wallet!</h2>
-			</header>
-			<section id="balance-container">
-				@Balances(balances)
-			</section>
-			if alertMessage != "" {
-				@TransferAlert(alertMessage, isSuccess)
-			}
-			<footer>
-				<nav>
-					<ul>
-						<li><button hx-get="/transfer-form" hx-target="body">Transfer Money</button></li>
-						<li><button hx-get="/history" hx-target="body">Transaction History</button></li>
-					</ul>
-				</nav>
-			</footer>
+		<header>
+			<h2>McDuck Wallet!</h2>
+		</header>
+		<section id="balance-container">
+			@Balances(balances)
+		</section>
+		if alertMessage != "" {
+			@TransferAlert(alertMessage, isSuccess)
+		}
+		<footer>
+			<nav>
+				<ul>
+					<li><button hx-get="/transfer-form" hx-target="body">Transfer Money</button></li>
+					<li><button hx-get="/history" hx-target="body">Transaction History</button></li>
+				</ul>
+			</nav>
+		</footer>
 	</main>
 }
