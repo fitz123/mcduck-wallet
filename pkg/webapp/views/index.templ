@@ -47,7 +47,7 @@ templ tgInit() {
         });
 
         // Initial load of authenticated content
-        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});
+        htmx.ajax('GET', '/dashboard', {target: 'body', swap: 'innerHTML'});
 
         tg.ready();
 
@@ -61,7 +61,7 @@ templ tgInit() {
                 } else {
                     tg.BackButton.show();
                     tg.BackButton.onClick(() => {
-                        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});
+                        htmx.ajax('GET', '/dashboard', {target: 'body', swap: 'innerHTML'});
                     });
                 }
             }
