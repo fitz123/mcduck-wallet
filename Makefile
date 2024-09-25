@@ -1,7 +1,7 @@
 # Variables
 BINARY_NAME := mcduck-wallet
 REMOTE_SERVER := mcduck
-REMOTE_BINARY := ~/mcduck-wallet/bin/$(BINARY_NAME)
+REMOTE_PATH := ~/mcduck-wallet
 LDFLAGS := '-linkmode external -extldflags "-static" -s -w'
 
 # Phony targets
@@ -12,7 +12,7 @@ all: build transfer clean
 
 # Build the binary
 build:
-	@echo "Generating html templates..."
+	@echo "Generating html templates.."
 	templ generate ./...
 	@echo "Building binary..."
 	@mkdir -p bin
@@ -22,12 +22,12 @@ build:
 # Transfer the binary to the remote server
 transfer: build
 	@echo "Transferring the binary to the remote server..."
-	command scp ./bin/$(BINARY_NAME) $(REMOTE_SERVER):$(REMOTE_BINARY).tmp
+	command scp ./bin/$(BINARY_NAME) $(REMOTE_SERVER):$(REMOTE_PATH)/bin/$(BINARY_NAME).tmp
 
 # Deploy the application
 deploy: transfer
 	@echo "Restarting the application on the remote server..."
-	command ssh $(REMOTE_SERVER) 'pkill $(BINARY_NAME) || true; mv $(REMOTE_BINARY){.tmp,}; nohup $(REMOTE_BINARY) > /dev/null 2>&1 &'
+	command ssh $(REMOTE_SERVER) 'pkill $(BINARY_NAME) || true; cd $(REMOTE_PATH) && mv bin/$(BINARY_NAME){.tmp,}; nohup ./bin/$(BINARY_NAME) > /dev/null 2>&1 &'
 	@echo "Deployment complete."
 
 # Clean up

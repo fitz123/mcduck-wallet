@@ -24,7 +24,7 @@ func (wc *webContext) GetUserID() int64 {
 }
 
 func ServeHTML(w http.ResponseWriter, r *http.Request) {
-	component := views.Index("", false)
+	component := views.InitialLoadingIndex()
 	_ = component.Render(r.Context(), w)
 }
 
@@ -59,11 +59,11 @@ func GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	component := views.Balances(balances)
+	component := views.MainContent(balances, "", false)
 	err = component.Render(r.Context(), w)
 	if err != nil {
-		logger.Error("Error rendering balances template", "error", err)
-		http.Error(w, "Error rendering balances", http.StatusInternalServerError)
+		logger.Error("Error rendering full index", "error", err)
+		http.Error(w, "Error rendering page", http.StatusInternalServerError)
 		return
 	}
 }
@@ -89,12 +89,8 @@ func TransferMoney(w http.ResponseWriter, r *http.Request) {
 	toUsername := strings.TrimPrefix(r.FormValue("to_username"), "@")
 	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 	if err != nil {
-		indexComponent := views.Index("Invalid amount", false)
-		err = indexComponent.Render(r.Context(), w)
-		if err != nil {
-			logger.Error("Error rendering index page after transfer error", "error", err)
-			http.Error(w, "Error rendering page", http.StatusInternalServerError)
-		}
+		logger.Error("TransferMoney: Invalid amount", "error", err)
+		renderErrorResponse(w, r, "Invalid amount", ctx)
 		return
 	}
 
@@ -103,12 +99,7 @@ func TransferMoney(w http.ResponseWriter, r *http.Request) {
 		defaultCurrency, err := database.GetDefaultCurrency()
 		if err != nil {
 			logger.Error("TransferMoney: Failed to get default currency", "error", err)
-			indexComponent := views.Index("Failed to process transfer", false)
-			err = indexComponent.Render(r.Context(), w)
-			if err != nil {
-				logger.Error("Error rendering index page after transfer error", "error", err)
-				http.Error(w, "Error rendering page", http.StatusInternalServerError)
-			}
+			renderErrorResponse(w, r, "Failed to process transfer", ctx)
 			return
 		}
 		currencyCode = defaultCurrency.Code
@@ -117,32 +108,45 @@ func TransferMoney(w http.ResponseWriter, r *http.Request) {
 	err = core.TransferMoney(ctx, toUsername, amount, currencyCode)
 	if err != nil {
 		logger.Error("TransferMoney: Failed to transfer money", "error", err)
-		indexComponent := views.Index(err.Error(), false)
-		err = indexComponent.Render(r.Context(), w)
-		if err != nil {
-			logger.Error("Error rendering index page after transfer error", "error", err)
-			http.Error(w, "Error rendering page", http.StatusInternalServerError)
-		}
+		renderErrorResponse(w, r, err.Error(), ctx)
 		return
 	}
 
 	currency, err := database.GetCurrencyByCode(currencyCode)
 	if err != nil {
 		logger.Error("TransferMoney: Failed to get currency details", "error", err, "currencyCode", currencyCode)
-		indexComponent := views.Index("Transfer successful, but failed to get currency details", true)
-		err = indexComponent.Render(r.Context(), w)
-		if err != nil {
-			logger.Error("Error rendering index page after transfer", "error", err)
-			http.Error(w, "Error rendering page", http.StatusInternalServerError)
-		}
+		renderErrorResponse(w, r, "Transfer successful, but failed to get currency details", ctx)
 		return
 	}
 
 	response := fmt.Sprintf(messages.InfoTransferSuccessful, amount, currency.Code, toUsername)
-	indexComponent := views.Index(response, true)
-	err = indexComponent.Render(r.Context(), w)
+
+	balances, err := core.GetBalance(ctx)
 	if err != nil {
-		logger.Error("Error rendering index page after transfer", "error", err)
+		logger.Error("Failed to get balances after transfer", "error", err, "userID", userID)
+		renderErrorResponse(w, r, "Transfer successful, but failed to update balances", ctx)
+		return
+	}
+
+	component := views.MainContent(balances, response, true)
+	err = component.Render(r.Context(), w)
+	if err != nil {
+		logger.Error("Error rendering main content after transfer", "error", err)
+		http.Error(w, "Error rendering page", http.StatusInternalServerError)
+	}
+}
+
+func renderErrorResponse(w http.ResponseWriter, r *http.Request, message string, ctx *webContext) {
+	balances, err := core.GetBalance(ctx)
+	if err != nil {
+		logger.Error("Failed to get balances for error response", "error", err)
+		balances = []database.Balance{} // Use empty balances if we can't fetch them
+	}
+
+	component := views.MainContent(balances, message, false)
+	err = component.Render(r.Context(), w)
+	if err != nil {
+		logger.Error("Error rendering error response", "error", err)
 		http.Error(w, "Error rendering page", http.StatusInternalServerError)
 	}
 }
