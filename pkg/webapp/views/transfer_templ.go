@@ -40,7 +40,7 @@ func TransferForm(balances []database.Balance) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<main><article><header><h2>Transfer Form</h2></header><form hx-post=\"/transfer\" hx-target=\"body\" hx-confirm=\"Are you sure you want to make this transfer?\"><label for=\"to_username\">Recipient Username <input type=\"text\" id=\"to_username\" name=\"to_username\" placeholder=\"@username\" required></label> <label for=\"amount\">Amount <input type=\"number\" id=\"amount\" name=\"amount\" min=\"1\" step=\"1\" required></label> <label for=\"currency\">Currency <select id=\"currency\" name=\"currency\" required>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<main><header><h2>Transfer Form</h2></header><form hx-post=\"/transfer\" hx-target=\"body\" hx-confirm=\"Are you sure you want to make this transfer?\"><label for=\"to_username\">Recipient Username <input type=\"text\" id=\"to_username\" name=\"to_username\" placeholder=\"@username\" required></label> <label for=\"amount\">Amount <input type=\"number\" id=\"amount\" name=\"amount\" min=\"1\" step=\"1\" required></label> <label for=\"currency\">Currency <select id=\"currency\" name=\"currency\" required>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -52,7 +52,7 @@ func TransferForm(balances []database.Balance) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(balance.Currency.Code)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 32, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 28, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -65,7 +65,7 @@ func TransferForm(balances []database.Balance) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(balance.Currency.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 33, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 29, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -78,7 +78,7 @@ func TransferForm(balances []database.Balance) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(balance.Currency.Code)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 33, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 29, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -91,7 +91,7 @@ func TransferForm(balances []database.Balance) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.0f", balance.Amount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 33, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 29, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -102,7 +102,7 @@ func TransferForm(balances []database.Balance) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</select></label> <button type=\"submit\">Confirm Transfer</button></form></article></main>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</select></label> <button type=\"submit\">Confirm Transfer</button></form></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -131,12 +131,12 @@ func TransferAlert(message string, isSuccess bool) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var7 = []any{ternary(isSuccess, "alert-success", "alert-error")}
+		var templ_7745c5c3_Var7 = []any{ternary(isSuccess, "text-success", "text-error")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div role=\"alert\" class=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<mark class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -156,13 +156,13 @@ func TransferAlert(message string, isSuccess bool) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 46, Col: 17}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pkg/webapp/views/transfer.templ`, Line: 40, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</mark>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

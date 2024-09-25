@@ -1,67 +1,42 @@
 package views
 
-templ Index(alertMessage string, isSuccess bool) {
-    <!DOCTYPE html>
-    <html lang="en">
-        @head()
-        @tgInit()
-        @style()
-        @indexBody(alertMessage, isSuccess)
-    </html>
+import "github.com/fitz123/mcduck-wallet/pkg/database"
+
+templ head() {
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>McDuck Wallet WebApp</title>
+		<meta name="color-scheme" content="light dark"/>
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.pink.min.css"
+		/>
+		<script src="https://unpkg.com/htmx.org@2.0.2" integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ" crossorigin="anonymous"></script>
+		<script src="https://telegram.org/js/telegram-web-app.js"></script>
+	</head>
 }
 
 templ style() {
-    <style>
+	<style>
          /* Use Pico CSS variables for success and error text colors */
          .text-success {
              color: var(--pico-ins-color); /* Greenish color for positive amounts */
+             background-color: var(--pico-ins-background)
          }
          .text-error {
              color: var(--pico-del-color); /* Reddish color for negative amounts */
+             background-color: var(--pico-del-background)
          }
-         .alert-success {
-              background-color: var(--pico-ins-background);
-              border-color: var(--pico-ins-border);
-              color: var(--pico-ins-color);
-              border-radius: var(--pico-border-radius);
-          }
-          .alert-error {
-              background-color: var(--pico-del-background);
-              border-color: var(--pico-del-border);
-              color: var(--pico-del-color);
-              border-radius: var(--pico-border-radius);
-          }
-           /* Ensure main container doesn't shift */
-           main {
-                flex-grow: 1;
-                display: flex;
-                flex-direction: column;
-                min-height: 100vh;
-            }
     </style>
 }
 
-
-templ head() {
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>McDuck Wallet WebApp</title>
-        <meta name="color-scheme" content="light dark">
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.pink.min.css"
-        >
-        <script src="https://unpkg.com/htmx.org@2.0.2" integrity="sha384-Y7hw+L/jvKeWIRRkqWYfPcvVxHzVzn5REgzbawhxAuQGwX1XWe70vji+VSeHOThJ" crossorigin="anonymous"></script>
-        <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    </head>
-}
-
 templ tgInit() {
-    <script>
+	<script>
     document.addEventListener('DOMContentLoaded', () => {
         let tg = window.Telegram.WebApp;
         tg.expand();
+
         tg.BackButton.hide();
 
         // Set the color scheme to match the user's theme
@@ -73,45 +48,48 @@ templ tgInit() {
             e.detail.headers["X-Telegram-Init-Data"] = tg.initData;
         });
 
-        // Manage loading state
-        htmx.on('htmx:afterOnLoad', function(evt) {
-            const balanceContainer = document.getElementById('balance-container');
-            balanceContainer.setAttribute('aria-busy', 'false');
-        });
-
-        // Scroll to top after successful HTMX submission
-         htmx.on("htmx:beforeRequest", function(evt) {
-             window.scrollTo({ top: 0, behavior: 'auto' });
-         });
+        // Initial load of authenticated content
+        htmx.ajax('GET', '/balance', {target: '#main-content', swap: 'innerHTML'});
 
         tg.ready();
     });
     </script>
 }
 
-templ indexBody(alertMessage string, isSuccess bool) {
-    <body>
-        <main>
-          <article>
-            <header>
-                <h2>Your Balances</h2>
-            </header>
-            <div id="balance-container" aria-busy="true"
-                 hx-get="/balance" hx-trigger="intersect once">
-            </div>
-            if alertMessage != "" {
-                @TransferAlert(alertMessage, isSuccess)
-            }
-            <div style="flex-grow: 1;"></div>
-            <div style="text-align: center;">
-                <button hx-get="/transfer-form" hx-target="body">
-                    Transfer Money
-                </button>
-                <button hx-get="/history" hx-target="body">
-                    Transaction History
-                </button>
-            </div>
-            </article>
-        </main>
-    </body>
+templ InitialLoadingIndex() {
+	<!DOCTYPE html>
+	<html lang="en">
+		@head()
+		@tgInit()
+		@style()
+		<body>
+			<main>
+				<div id="main-content"></div>
+			</main>
+		</body>
+	</html>
+}
+
+templ MainContent(balances []database.Balance, alertMessage string, isSuccess bool) {
+	<main>
+		<div id="main-content">
+			<header>
+				<h2>McDuck Wallet!</h2>
+			</header>
+			<section id="balance-container">
+				@Balances(balances)
+			</section>
+			if alertMessage != "" {
+				@TransferAlert(alertMessage, isSuccess)
+			}
+			<footer>
+				<nav>
+					<ul>
+						<li><button hx-get="/transfer-form" hx-target="#main-content">Transfer Money</button></li>
+						<li><button hx-get="/history" hx-target="#main-content">Transaction History</button></li>
+					</ul>
+				</nav>
+			</footer>
+		</div>
+	</main>
 }
