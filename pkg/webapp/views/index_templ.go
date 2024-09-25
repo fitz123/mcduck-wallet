@@ -89,7 +89,7 @@ func tgInit() templ.Component {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<script>\n    document.addEventListener('DOMContentLoaded', () => {\n        let tg = window.Telegram.WebApp;\n        tg.expand();\n\n        tg.BackButton.hide();\n\n        // Set the color scheme to match the user's theme\n        const theme = tg.colorScheme; // \"light\" or \"dark\"\n        document.documentElement.setAttribute('data-theme', theme);\n\n        // Add the Telegram initData to the request as a header\n        htmx.on(\"htmx:configRequest\", (e) => {\n            e.detail.headers[\"X-Telegram-Init-Data\"] = tg.initData;\n        });\n\n        // Initial load of authenticated content\n        htmx.ajax('GET', '/balance', {target: '#main-content', swap: 'innerHTML'});\n\n        tg.ready();\n    });\n    </script>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<script>\n    document.addEventListener('DOMContentLoaded', () => {\n        let tg = window.Telegram.WebApp;\n        tg.expand();\n\n        // Set the color scheme to match the user's theme\n        const theme = tg.colorScheme; // \"light\" or \"dark\"\n        document.documentElement.setAttribute('data-theme', theme);\n\n        // Add the Telegram initData to the request as a header\n        htmx.on(\"htmx:configRequest\", (e) => {\n            e.detail.headers[\"X-Telegram-Init-Data\"] = tg.initData;\n        });\n\n        // Initial load of authenticated content\n        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});\n\n        tg.ready();\n\n        // Function to update the back button based on the current page\n        function updateBackButton() {\n            const mainElement = document.querySelector('main');\n            if (mainElement) {\n                const page = mainElement.getAttribute('data-page');\n                if (page === 'main') {\n                    tg.BackButton.hide();\n                } else {\n                    tg.BackButton.show();\n                    tg.BackButton.onClick(() => {\n                        htmx.ajax('GET', '/balance', {target: 'body', swap: 'innerHTML'});\n                    });\n                }\n            }\n        }\n\n        // Initial check\n        updateBackButton();\n\n        // Update back button after each content swap\n        htmx.on('htmx:afterSwap', () => {\n            updateBackButton();\n        });\n    });\n    </script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -134,7 +134,7 @@ func InitialLoadingIndex() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<body><main><div id=\"main-content\"></div></main></body></html>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<body><main data-page=\"main\"></main></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -163,7 +163,7 @@ func MainContent(balances []database.Balance, alertMessage string, isSuccess boo
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<main><div id=\"main-content\"><header><h2>McDuck Wallet!</h2></header><section id=\"balance-container\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<main data-page=\"main\"><header><h2>McDuck Wallet!</h2></header><section id=\"balance-container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -181,7 +181,7 @@ func MainContent(balances []database.Balance, alertMessage string, isSuccess boo
 				return templ_7745c5c3_Err
 			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<footer><nav><ul><li><button hx-get=\"/transfer-form\" hx-target=\"#main-content\">Transfer Money</button></li><li><button hx-get=\"/history\" hx-target=\"#main-content\">Transaction History</button></li></ul></nav></footer></div></main>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<footer><nav><ul><li><button hx-get=\"/transfer-form\" hx-target=\"body\">Transfer Money</button></li><li><button hx-get=\"/history\" hx-target=\"body\">Transaction History</button></li></ul></nav></footer></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
