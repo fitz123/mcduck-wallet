@@ -45,9 +45,9 @@ func main() {
 	// Initialize and start the web server
 	server := initWebServer(cfg.ServerAddress, webService)
 	go func() {
-		logger.Info("Starting WebApp server on %s", cfg.ServerAddress)
+		logger.Info("Starting WebApp server", "address", cfg.ServerAddress)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("WebApp server error: %v", err)
+			logger.Error("WebApp server error", "error", err)
 		}
 	}()
 
