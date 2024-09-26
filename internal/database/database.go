@@ -22,6 +22,24 @@ func New(dsn string) (*DB, error) {
 		return nil, err
 	}
 
+	// Check if default currency exists, if not create it
+	var defaultCurrency Currency
+	if err := db.Where("is_default = ?", true).First(&defaultCurrency).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			defaultCurrency = Currency{
+				Code:      "USD",
+				Name:      "US Dollar",
+				Sign:      "$",
+				IsDefault: true,
+			}
+			if err := db.Create(&defaultCurrency).Error; err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
 	return &DB{Conn: db}, nil
 }
 
