@@ -99,7 +99,7 @@ templ MainContent(balances []database.Balance, alertMessage string, isSuccess bo
 			@Balances(balances)
 		</section>
 		if alertMessage != "" {
-			@TransferAlert(alertMessage, isSuccess)
+			@alert(alertMessage, isSuccess)
 		}
 		<footer>
 			<nav>
@@ -110,4 +110,8 @@ templ MainContent(balances []database.Balance, alertMessage string, isSuccess bo
 			</nav>
 		</footer>
 	</main>
+}
+
+templ alert(message string, isSuccess bool) {
+	<mark class={ ternary(isSuccess, "text-success", "text-error") }>{ message }</mark>
 }
