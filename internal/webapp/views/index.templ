@@ -51,6 +51,11 @@ templ tgInit() {
 
         tg.ready();
 
+        // Set up back button handler once
+        tg.BackButton.onClick(() => {
+            htmx.ajax('GET', '/dashboard', {target: 'body', swap: 'innerHTML'});
+        });
+
         // Function to update the back button based on the current page
         function updateBackButton() {
             const mainElement = document.querySelector('main');
@@ -60,9 +65,6 @@ templ tgInit() {
                     tg.BackButton.hide();
                 } else {
                     tg.BackButton.show();
-                    tg.BackButton.onClick(() => {
-                        htmx.ajax('GET', '/dashboard', {target: 'body', swap: 'innerHTML'});
-                    });
                 }
             }
         }
