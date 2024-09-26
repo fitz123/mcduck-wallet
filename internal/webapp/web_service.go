@@ -36,15 +36,14 @@ func (ws *WebService) ServeHome(w http.ResponseWriter, r *http.Request) {
 
 func (ws *WebService) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r.Context())
-
-	balances, err := ws.coreService.GetBalances(r.Context(), userID)
+	user, err := ws.userService.GetUser(r.Context(), userID)
 	if err != nil {
-		logger.Error("Failed to get balances", "error", err)
-		http.Error(w, "Failed to fetch balances", http.StatusInternalServerError)
+		logger.Error(messages.ErrUserNotFound, "error", err)
+		http.Error(w, messages.ErrUserNotFound, http.StatusInternalServerError)
 		return
 	}
 
-	component := views.MainContent(balances, "", true)
+	component := views.MainContent(user, "", true)
 	if err := component.Render(r.Context(), w); err != nil {
 		logger.Error("Error rendering dashboard", "error", err)
 		http.Error(w, "Error rendering page", http.StatusInternalServerError)
@@ -161,15 +160,15 @@ func (ws *WebService) handleResponse(w http.ResponseWriter, r *http.Request, use
 		message = response.Error.Error()
 	}
 
-	balances, err := ws.coreService.GetBalances(r.Context(), userID)
+	user, err := ws.userService.GetUser(r.Context(), userID)
 	if err != nil {
-		logger.Error("Failed to get balances", "error", err)
-		balances = []database.Balance{}
-		message = "Failed to fetch balances"
+		logger.Error("Failed to get user", "error", err)
+		user = &database.User{}
+		message = "Failed to fetch user data"
 		success = false
 	}
 
-	component := views.MainContent(balances, message, success)
+	component := views.MainContent(user, message, success)
 	if err := component.Render(r.Context(), w); err != nil {
 		logger.Error("Error rendering response", "error", err)
 		http.Error(w, "Error rendering page", http.StatusInternalServerError)

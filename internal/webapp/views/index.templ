@@ -92,13 +92,13 @@ templ InitialLoadingIndex() {
 	</html>
 }
 
-templ MainContent(balances []database.Balance, alertMessage string, isSuccess bool) {
+templ MainContent(user *database.User, alertMessage string, isSuccess bool) {
 	<main data-page="main">
 		<header>
 			<h2>McDuck Wallet!</h2>
 		</header>
 		<section id="balance-container">
-			@Balances(balances)
+			@Balances(user.Accounts)
 		</section>
 		if alertMessage != "" {
 			@alert(alertMessage, isSuccess)
