@@ -17,7 +17,7 @@ build:
 	@echo "Building binary..."
 	@mkdir -p bin
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-cc \
-	go build -ldflags $(LDFLAGS) -o bin/$(BINARY_NAME) main.go
+	go build -ldflags $(LDFLAGS) -o bin/$(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
 
 # Transfer the binary to the remote server
 transfer: build

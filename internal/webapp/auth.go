@@ -1,5 +1,4 @@
-// File: pkg/webapp/auth.go
-
+// File: ./internal/webapp/auth.go
 package webapp
 
 import (
@@ -14,24 +13,22 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/fitz123/mcduck-wallet/pkg/logger"
+	"github.com/fitz123/mcduck-wallet/internal/logger"
 )
 
-var BotToken string
-
-// InitAuth initializes the authentication module with the bot token
-func InitAuth(botToken string) {
-	BotToken = botToken
-	logger.Info("Authentication module initialized")
+type AuthService struct {
+	BotToken string
 }
 
-// AuthMiddleware is a middleware that validates the Telegram WebApp init data
-func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func NewAuthService(botToken string) *AuthService {
+	return &AuthService{BotToken: botToken}
+}
+
+func (as *AuthService) AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Debug("AuthMiddleware: Starting authentication process")
 
 		initData := r.Header.Get("X-Telegram-Init-Data")
-
 		logger.Debug("AuthMiddleware: Received initData", "initData", initData)
 
 		if initData == "" {
@@ -40,13 +37,13 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if !validateInitData(initData) {
+		if !as.validateInitData(initData) {
 			logger.Warn("AuthMiddleware: Invalid initData")
 			http.Error(w, "Invalid init data", http.StatusUnauthorized)
 			return
 		}
 
-		userID, err := getUserIDFromInitData(initData)
+		userID, err := as.getUserIDFromInitData(initData)
 		if err != nil {
 			logger.Error("AuthMiddleware: Error getting user ID", "error", err)
 			http.Error(w, "Invalid user data", http.StatusUnauthorized)
@@ -56,26 +53,25 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		logger.Info("AuthMiddleware: Authenticated user", "userID", userID)
 
 		// Set user ID in context
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, "userID", userID)
+		ctx := context.WithValue(r.Context(), "userID", userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
-	}
+	})
 }
 
-func validateInitData(initData string) bool {
+func (as *AuthService) validateInitData(initData string) bool {
 	values, err := url.ParseQuery(initData)
 	if err != nil {
 		return false
 	}
 
-	dataCheckString := getDataCheckString(values)
-	secret := getHMACSecret()
-	hash := getHash(dataCheckString, secret)
+	dataCheckString := as.getDataCheckString(values)
+	secret := as.getHMACSecret()
+	hash := as.getHash(dataCheckString, secret)
 
 	return hash == values.Get("hash")
 }
 
-func getDataCheckString(values url.Values) string {
+func (as *AuthService) getDataCheckString(values url.Values) string {
 	dataToCheck := make([]string, 0, len(values))
 	for k, v := range values {
 		if k == "hash" {
@@ -87,19 +83,19 @@ func getDataCheckString(values url.Values) string {
 	return strings.Join(dataToCheck, "\n")
 }
 
-func getHMACSecret() []byte {
+func (as *AuthService) getHMACSecret() []byte {
 	secret := hmac.New(sha256.New, []byte("WebAppData"))
-	secret.Write([]byte(BotToken))
+	secret.Write([]byte(as.BotToken))
 	return secret.Sum(nil)
 }
 
-func getHash(data string, secret []byte) string {
+func (as *AuthService) getHash(data string, secret []byte) string {
 	h := hmac.New(sha256.New, secret)
 	h.Write([]byte(data))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func getUserIDFromInitData(initData string) (int64, error) {
+func (as *AuthService) getUserIDFromInitData(initData string) (int64, error) {
 	values, _ := url.ParseQuery(initData)
 	userDataStr := values.Get("user")
 	var userData map[string]interface{}
@@ -114,9 +110,7 @@ func getUserIDFromInitData(initData string) (int64, error) {
 	return int64(userID), nil
 }
 
-// GetUserIDFromContext retrieves the user ID from the request context
-func GetUserIDFromContext(r *http.Request) int64 {
-	userID, _ := r.Context().Value("userID").(int64)
-	logger.Debug("Retrieved user ID from context", "userID", userID)
+func GetUserIDFromContext(ctx context.Context) int64 {
+	userID, _ := ctx.Value("userID").(int64)
 	return userID
 }

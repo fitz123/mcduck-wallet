@@ -9,10 +9,24 @@ import (
 
 var defaultLogger *slog.Logger
 
-func init() {
+// accept loglevel as string and set corresponding log level
+func Init(logLevel string) {
+	var level slog.Level
+	switch logLevel {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelDebug
+	}
 	// Initialize the default logger
 	defaultLogger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: level,
 	}))
 }
 
