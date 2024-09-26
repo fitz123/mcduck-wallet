@@ -34,7 +34,3 @@ templ TransferForm(balances []database.Balance) {
 		</form>
 	</main>
 }
-
-templ TransferAlert(message string, isSuccess bool) {
-	<mark class={ ternary(isSuccess, "text-success", "text-error") }>{ message }</mark>
-}
