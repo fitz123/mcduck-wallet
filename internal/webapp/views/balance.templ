@@ -6,20 +6,19 @@ import (
 )
 
 templ Balances(balances []database.Balance) {
-	// make a title "Total balance"
-	for _, balance := range balances {
-		<figure>
-			<figcaption>
-				Account Balance
-			</figcaption>
-			<table role="grid">
-				<thead>
-					<tr>
-						<th scope="col">Currency</th>
-						<th scope="col">Balance</th>
-					</tr>
-				</thead>
-				<tbody>
+	<figure>
+		<figcaption>
+			Account Balances
+		</figcaption>
+		<table role="grid">
+			<thead>
+				<tr>
+					<th scope="col">Currency</th>
+					<th scope="col">Balance</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, balance := range balances {
 					<tr>
 						<td>{ balance.Currency.Name }</td>
 						<td>
@@ -29,8 +28,8 @@ templ Balances(balances []database.Balance) {
 							</strong>
 						</td>
 					</tr>
-				</tbody>
-			</table>
-		</figure>
-	}
+				}
+			</tbody>
+		</table>
+	</figure>
 }

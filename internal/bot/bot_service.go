@@ -54,9 +54,10 @@ func (bs *BotService) registerHandlers() {
 	bs.bot.Handle("/history", bs.handleHistory)
 	bs.bot.Handle("/set", bs.handleAdminSet)
 	bs.bot.Handle("/listusers", bs.handleAdminListUsers)
-	bs.bot.Handle("/removeuser", bs.handleAdminRemoveUser)
+	bs.bot.Handle("/disableuser", bs.handleAdminDisableUser)
+	bs.bot.Handle("/destroyuser", bs.handleAdminDestroyUser)
 	bs.bot.Handle("/adduser", bs.handleAdminAddUser)
-	bs.bot.Handle("/addcurrency", bs.handleAdminAddCurrency)
+	bs.bot.Handle("/addcurrency", bs.handleAddCurrency)
 	bs.bot.Handle("/setdefaultcurrency", bs.handleAdminSetDefaultCurrency)
 }
 
@@ -69,7 +70,7 @@ func (bs *BotService) handleStart(c tele.Context) error {
 			TelegramID: c.Sender().ID,
 			Username:   c.Sender().Username,
 		}
-		err = bs.userService.CreateUser(ctx, user)
+		err := bs.coreService.AddUser(ctx, c.Sender().ID, c.Sender().Username)
 		if err != nil {
 			return c.Send("Error creating user: " + err.Error())
 		}
@@ -259,7 +260,7 @@ func (bs *BotService) handleAdminListUsers(c tele.Context) error {
 	return c.Send(response)
 }
 
-func (bs *BotService) handleAdminRemoveUser(c tele.Context) error {
+func (bs *BotService) handleAdminDisableUser(c tele.Context) error {
 	ctx := context.Background()
 	if !bs.userService.IsAdmin(ctx, c.Sender().ID) {
 		return c.Send(messages.ErrUnauthorized)
@@ -267,16 +268,36 @@ func (bs *BotService) handleAdminRemoveUser(c tele.Context) error {
 
 	args := c.Args()
 	if len(args) != 1 {
-		return c.Send("Usage: /removeuser <username>")
+		return c.Send("Usage: /disableuser <username>")
 	}
 
 	username := strings.TrimPrefix(args[0], "@")
-	err := bs.coreService.RemoveUser(ctx, username)
+	err := bs.coreService.DisableUser(ctx, username)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Failed to remove user: %v", err))
+		return c.Send(fmt.Sprintf("Failed to disable user: %v", err))
 	}
 
-	return c.Send(fmt.Sprintf("User @%s has been successfully removed.", username))
+	return c.Send(fmt.Sprintf("User @%s has been successfully disabled.", username))
+}
+
+func (bs *BotService) handleAdminDestroyUser(c tele.Context) error {
+	ctx := context.Background()
+	if !bs.userService.IsAdmin(ctx, c.Sender().ID) {
+		return c.Send(messages.ErrUnauthorized)
+	}
+
+	args := c.Args()
+	if len(args) != 1 {
+		return c.Send("Usage: /destroyuser <username>")
+	}
+
+	username := strings.TrimPrefix(args[0], "@")
+	err := bs.coreService.DestroyUser(ctx, username)
+	if err != nil {
+		return c.Send(fmt.Sprintf("Failed to destroy user: %v", err))
+	}
+
+	return c.Send(fmt.Sprintf("User @%s has been successfully destroyed.", username))
 }
 
 func (bs *BotService) handleAdminAddUser(c tele.Context) error {
@@ -304,11 +325,8 @@ func (bs *BotService) handleAdminAddUser(c tele.Context) error {
 	return c.Send(fmt.Sprintf("User @%s with Telegram ID %d has been successfully added.", username, telegramID))
 }
 
-func (bs *BotService) handleAdminAddCurrency(c tele.Context) error {
+func (bs *BotService) handleAddCurrency(c tele.Context) error {
 	ctx := context.Background()
-	if !bs.userService.IsAdmin(ctx, c.Sender().ID) {
-		return c.Send(messages.ErrUnauthorized)
-	}
 
 	args := c.Args()
 	if len(args) != 3 {
