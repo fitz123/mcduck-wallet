@@ -95,7 +95,8 @@ templ InitialLoadingIndex() {
 templ MainContent(user *database.User, alertMessage string, isSuccess bool) {
 	<main data-page="main">
 		<header>
-			<h2>McDuck Wallet!</h2>
+			// greet username by user.Name
+			<h2>Welcome { user.Username }!</h2>
 		</header>
 		<section id="balance-container">
 			@Balances(user.Accounts)
