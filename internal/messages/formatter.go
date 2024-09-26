@@ -5,7 +5,7 @@ package messages
 import (
 	"fmt"
 
-	"github.com/fitz123/mcduck-wallet/pkg/database"
+	"github.com/fitz123/mcduck-wallet/internal/database"
 )
 
 // FormatTransactionHistory formats the transaction history for bot
