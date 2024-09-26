@@ -6,8 +6,12 @@ import (
 )
 
 templ Balances(balances []database.Balance) {
+	// make a title "Total balance"
 	for _, balance := range balances {
 		<figure>
+			<figcaption>
+				Account Balance
+			</figcaption>
 			<table role="grid">
 				<thead>
 					<tr>
