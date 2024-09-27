@@ -114,6 +114,37 @@ func (ws *WebService) AuthMiddleware(next http.Handler) http.Handler {
 	return ws.authService.AuthMiddleware(next)
 }
 
+func (ws *WebService) GetAddCurrencyForm(w http.ResponseWriter, r *http.Request) {
+	component := views.AddCurrencyForm()
+	if err := component.Render(r.Context(), w); err != nil {
+		logger.Error("Error rendering add currency form", "error", err)
+		http.Error(w, "Error rendering page", http.StatusInternalServerError)
+	}
+}
+
+func (ws *WebService) AddCurrency(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserIDFromContext(r.Context())
+	r.ParseForm()
+
+	code := strings.ToUpper(r.FormValue("code"))
+	name := r.FormValue("name")
+	sign := r.FormValue("sign")
+
+	err := ws.coreService.AddCurrency(r.Context(), code, name, sign)
+	if err != nil {
+		ws.handleResponse(w, r, userID, Response{
+			Message:    "Failed to add currency",
+			Error:      err,
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	ws.handleResponse(w, r, userID, Response{
+		Message: fmt.Sprintf("Currency %s (%s) with sign %s has been successfully added.", code, name, sign),
+	})
+}
+
 // Helper functions
 
 func (ws *WebService) parseTransferFormValues(r *http.Request) (string, float64, string, error) {

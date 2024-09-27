@@ -96,7 +96,7 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 	if fromBalance.Amount < amount {
 		return errors.New("insufficient balance")
 	}
-	// If recipient doesn't have the currency, create a balance for them
+
 	if toBalance == nil {
 		// Find or create the currency
 		currency, err := s.GetCurrencyByCode(ctx, currencyCode)
@@ -216,28 +216,56 @@ func (s *coreService) AdminSetBalance(ctx context.Context, adminTelegramID int64
 		}
 	}
 
-	if targetBalance == nil {
-		// Create new balance
-		currency, err := s.GetCurrencyByCode(ctx, currencyCode)
+	currency, err := s.GetCurrencyByCode(ctx, currencyCode)
+	if err != nil {
+		return err
+	}
+
+	// Perform the balance update and transaction record inside a database transaction
+	return s.db.Conn.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// If the user doesn't have a balance for this currency, create one
+		if targetBalance == nil {
+			targetBalance = &database.Balance{
+				UserID:     targetUser.ID,
+				Amount:     amount,
+				CurrencyID: currency.ID,
+			}
+			if err := tx.Create(targetBalance).Error; err != nil {
+				return err
+			}
+		} else {
+			targetBalance.Amount = amount
+			if err := tx.Save(targetBalance).Error; err != nil {
+				return err
+			}
+		}
+
+		// Get the admin user details
+		adminUser, err := s.userService.GetUser(ctx, adminTelegramID)
 		if err != nil {
 			return err
 		}
-		targetBalance = &database.Balance{
-			UserID:     targetUser.ID,
-			Amount:     amount,
-			CurrencyID: currency.ID,
-		}
-		if err := s.db.Conn.WithContext(ctx).Create(targetBalance).Error; err != nil {
-			return err
-		}
-	} else {
-		targetBalance.Amount = amount
-		if err := s.db.Conn.WithContext(ctx).Save(targetBalance).Error; err != nil {
-			return err
-		}
-	}
 
-	return nil
+		// Create the transaction record
+		transaction := database.Transaction{
+			UserID:       targetUser.ID,
+			BalanceID:    targetBalance.ID,
+			Amount:       amount,
+			Type:         "admin_set_balance",
+			FromUserID:   adminUser.ID,
+			FromUsername: adminUser.Username,
+			ToUserID:     targetUser.ID,
+			ToUsername:   targetUser.Username,
+			Timestamp:    time.Now(),
+			BalanceAfter: targetBalance.Amount,
+		}
+
+		if err := tx.Create(&transaction).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (s *coreService) GetCurrencyByCode(ctx context.Context, code string) (*database.Currency, error) {
