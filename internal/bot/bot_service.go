@@ -216,7 +216,7 @@ func (bs *BotService) handleAdminSet(c tele.Context) error {
 			return c.Send("Failed to get currency information: " + err.Error())
 		}
 
-		return c.Send(fmt.Sprintf("Successfully set balance of %s to %s%.2f %s", targetUsername, currency.Sign, amount, currency.Name))
+		return c.Send(fmt.Sprintf("Successfully set balance of %s to %s%.0f %s", targetUsername, currency.Sign, amount, currency.Name))
 
 	default:
 		return c.Send("Unknown key. Available keys: admin, balance")

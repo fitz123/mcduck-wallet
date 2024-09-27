@@ -107,8 +107,9 @@ templ MainContent(user *database.User, alertMessage string, isSuccess bool) {
 		<footer>
 			<nav>
 				<ul>
-					<li><button hx-get="/transfer-form" hx-target="body">Transfer Money</button></li>
+					<li><button hx-get="/transfer-form" hx-target="body">Money Transfer</button></li>
 					<li><button hx-get="/history" hx-target="body">Transaction History</button></li>
+					<li><button hx-get="/add-currency-form" hx-target="body">Add Currency</button></li> <!-- New link -->
 				</ul>
 			</nav>
 		</footer>

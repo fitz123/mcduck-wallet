@@ -12,7 +12,7 @@ templ TransactionHistory(transactions []database.Transaction) {
 			@transactionItem(t)
 		}
 		<div>
-			<button hx-get="/" hx-target="body">
+			<button hx-get="/dashboard" hx-target="body">
 				Back to Balances
 			</button>
 		</div>
@@ -25,7 +25,10 @@ templ transactionItem(t database.Transaction) {
 		<div>
 			<div>
 				<strong>
-					{ trUsername(t.FromUsername) } → { trUsername(t.ToUsername) }
+					{   fmt.Sprintf("%s %s %s",
+                            trUsername(t.FromUsername),
+                            ternary(t.Type == "admin_set_balance", "SET", "→"),
+                            trUsername(t.ToUsername)) }
 				</strong>
 			</div>
 			<small class="secondary">
@@ -33,10 +36,8 @@ templ transactionItem(t database.Transaction) {
 			</small>
 		</div>
 		<!-- Right side: amount -->
-		<div style="font-weight: bold;">
-			<strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
-				{ fmt.Sprintf("%.0f", t.Amount) } { t.Balance.Currency.Code }
-			</strong>
-		</div>
+		<strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
+			{ fmt.Sprintf("%.0f", t.Amount) } { t.Balance.Currency.Code }
+		</strong>
 	</article>
 }

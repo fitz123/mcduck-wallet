@@ -14,5 +14,7 @@ func RegisterRoutes(r chi.Router, webService *webapp.WebService) {
 		r.Get("/transfer-form", webService.GetTransferForm)
 		r.Post("/transfer", webService.TransferMoney)
 		r.Get("/history", webService.GetTransactionHistory)
+		r.Get("/add-currency-form", webService.GetAddCurrencyForm) // New route
+		r.Post("/add-currency", webService.AddCurrency)
 	})
 }
