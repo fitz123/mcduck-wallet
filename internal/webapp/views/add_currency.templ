@@ -1,0 +1,24 @@
+package views
+
+templ AddCurrencyForm() {
+	<main data-page="add-currency">
+		<header>
+			<h2>Add New Currency</h2>
+		</header>
+		<form hx-post="/add-currency" hx-target="body">
+			<label for="code">
+				Currency Code
+				<input type="text" id="code" name="code" required/>
+			</label>
+			<label for="name">
+				Currency Name
+				<input type="text" id="name" name="name" required/>
+			</label>
+			<label for="sign">
+				Currency Sign
+				<input type="text" id="sign" name="sign" required/>
+			</label>
+			<button type="submit">Add Currency</button>
+		</form>
+	</main>
+}
