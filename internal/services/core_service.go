@@ -25,6 +25,7 @@ type CoreService interface {
 	DestroyUser(ctx context.Context, username string) error
 	AddCurrency(ctx context.Context, code, name, sign string) error
 	SetDefaultCurrency(ctx context.Context, code string) error
+	GetPreviousRecipients(ctx context.Context, userID uint) ([]string, error)
 }
 
 type coreService struct {
@@ -37,6 +38,21 @@ func NewCoreService(db *database.DB, userService UserService) CoreService {
 		db:          db,
 		userService: userService,
 	}
+}
+
+func (s *coreService) GetPreviousRecipients(ctx context.Context, userID uint) ([]string, error) {
+	var recipients []string
+	err := s.db.Conn.WithContext(ctx).
+		Model(&database.Transaction{}).
+		Where("user_id = ? AND type = ?", userID, "transfer_out").
+		Distinct().
+		Order("timestamp DESC").
+		Limit(10).
+		Pluck("to_username", &recipients).Error
+	if err != nil {
+		return nil, err
+	}
+	return recipients, nil
 }
 
 func (s *coreService) GetBalances(ctx context.Context, telegramID int64) ([]database.Balance, error) {
