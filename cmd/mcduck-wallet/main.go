@@ -17,6 +17,7 @@ import (
 	"github.com/fitz123/mcduck-wallet/internal/webapp"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	tele "gopkg.in/telebot.v3"
 )
 
 func main() {
@@ -33,10 +34,21 @@ func main() {
 	}
 	defer db.Close()
 
+	// Initialize the bot
+	botPref := tele.Settings{
+		Token:  cfg.TelegramToken,
+		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
+	}
+	botInstance, err := tele.NewBot(botPref)
+	if err != nil {
+		panic(err)
+	}
+
 	// Initialize services
 	userService := services.NewUserService(db)
-	coreService := services.NewCoreService(db, userService)
-	botService := bot.NewBotService(cfg.TelegramToken, userService, coreService)
+	notificationService := services.NewNotificationService(botInstance)
+	coreService := services.NewCoreService(db, userService, notificationService)
+	botService := bot.NewBotService(botInstance, userService, coreService)
 	webService := webapp.NewWebService(userService, coreService, cfg.TelegramToken)
 
 	// Start the bot
