@@ -91,8 +91,8 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 	if fromUser.ID == toUser.ID {
 		return errors.New("cannot transfer to self")
 	}
-	if amount <= 0 {
-		return errors.New("transfer amount must be positive")
+	if amount < 0.01 {
+		return errors.New("transfer amount must be at least 0.01")
 	}
 
 	var fromBalance, toBalance *database.Balance

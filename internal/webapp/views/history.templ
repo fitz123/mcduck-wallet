@@ -37,7 +37,7 @@ templ transactionItem(t database.Transaction) {
 		</div>
 		<!-- Right side: amount -->
 		<strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
-			{ fmt.Sprintf("%.0f", t.Amount) } { t.Balance.Currency.Code }
+			{ fmt.Sprintf("%.2f", t.Amount) } { t.Balance.Currency.Code }
 		</strong>
 	</article>
 }

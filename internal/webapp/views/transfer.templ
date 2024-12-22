@@ -23,14 +23,14 @@ templ TransferForm(balances []database.Balance, previousRecipients []string) {
 			</label>
 			<label for="amount">
 				Amount
-				<input type="number" id="amount" name="amount" min="1" step="1" required/>
+				<input type="number" id="amount" name="amount" min="0.01" step="0.01" required/>
 			</label>
 			<label for="currency">
 				Currency
 				<select id="currency" name="currency" required>
 					for _, balance := range balances {
 						<option value={ balance.Currency.Code }>
-							{ balance.Currency.Name } ({ balance.Currency.Code }) - Balance: { fmt.Sprintf("%.0f", balance.Amount) }
+							{ balance.Currency.Name } ({ balance.Currency.Code }) - Balance: { fmt.Sprintf("%.2f", balance.Amount) }
 						</option>
 					}
 				</select>

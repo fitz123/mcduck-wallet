@@ -98,7 +98,7 @@ func (bs *BotService) handleBalance(c tele.Context) error {
 
 	var formattedBalances []string
 	for _, balance := range balances {
-		formattedBalance := fmt.Sprintf("%s%.0f %s", balance.Currency.Sign, balance.Amount, balance.Currency.Name)
+		formattedBalance := fmt.Sprintf("%s%.2f %s", balance.Currency.Sign, balance.Amount, balance.Currency.Name)
 		formattedBalances = append(formattedBalances, formattedBalance)
 	}
 
@@ -164,7 +164,6 @@ func (bs *BotService) handleAdminSet(c tele.Context) error {
 	}
 
 	targetUsername := strings.TrimPrefix(args[0], "@")
-
 	keyValue := strings.Split(args[1], "=")
 	if len(keyValue) != 2 {
 		return c.Send("Invalid key=value format.")
@@ -206,7 +205,7 @@ func (bs *BotService) handleAdminSet(c tele.Context) error {
 			return c.Send("Failed to get currency information: " + err.Error())
 		}
 
-		return c.Send(fmt.Sprintf("Successfully set balance of %s to %s%.0f %s", targetUsername, currency.Sign, amount, currency.Name))
+		return c.Send(fmt.Sprintf("Successfully set balance of %s to %s%.2f %s", targetUsername, currency.Sign, amount, currency.Name))
 
 	default:
 		return c.Send("Unknown key. Available keys: admin, balance")
