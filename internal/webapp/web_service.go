@@ -177,6 +177,10 @@ func (ws *WebService) parseTransferFormValues(r *http.Request) (string, float64,
 		return "", 0, "", fmt.Errorf("Invalid amount")
 	}
 
+	if amount < 0.01 {
+		return "", 0, "", fmt.Errorf("Amount must be at least 0.01")
+	}
+
 	currencyCode := r.FormValue("currency")
 	if currencyCode == "" {
 		defaultCurrency, err := ws.coreService.GetDefaultCurrency(r.Context())

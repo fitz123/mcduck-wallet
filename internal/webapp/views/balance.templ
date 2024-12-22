@@ -24,7 +24,7 @@ templ Balances(balances []database.Balance) {
 						<td>
 							<strong>
 								{ balance.Currency.Sign }
-								{ fmt.Sprintf("%.0f", balance.Amount) }
+								{ fmt.Sprintf("%.2f", balance.Amount) }
 							</strong>
 						</td>
 					</tr>

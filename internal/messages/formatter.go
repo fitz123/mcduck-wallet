@@ -8,7 +8,6 @@ import (
 	"github.com/fitz123/mcduck-wallet/internal/database"
 )
 
-// FormatTransactionHistory formats the transaction history for bot
 func FormatTransactionHistory(transactions []database.Transaction) []string {
 	if len(transactions) == 0 {
 		return []string{InfoNoTransactions}
@@ -38,7 +37,7 @@ func FormatTransactionHistory(transactions []database.Transaction) []string {
 			description = fmt.Sprintf("%s *%s*", description, otherParty)
 		}
 
-		formattedTransactions[i] = fmt.Sprintf("%s - %s %s%.0f (Balance: %.0f)",
+		formattedTransactions[i] = fmt.Sprintf("%s - %s %s%.2f (Balance: %.2f)",
 			t.Timestamp.Format("2006-01-02 15:04"),
 			description,
 			t.Balance.Currency.Sign, abs(t.Amount),
@@ -49,7 +48,6 @@ func FormatTransactionHistory(transactions []database.Transaction) []string {
 	return formattedTransactions
 }
 
-// abs returns the absolute value of x
 func abs(x float64) float64 {
 	if x < 0 {
 		return -x
@@ -57,7 +55,6 @@ func abs(x float64) float64 {
 	return x
 }
 
-// truncateUsername shortens long usernames and adds an ellipsis
 func truncateUsername(username string) string {
 	maxLength := 15
 	if len(username) > maxLength {
