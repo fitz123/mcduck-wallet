@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/fitz123/mcduck-wallet/internal/database"
 	"github.com/fitz123/mcduck-wallet/internal/messages"
@@ -20,16 +19,7 @@ type BotService struct {
 	coreService services.CoreService // Added core service for business logic
 }
 
-func NewBotService(token string, userService services.UserService, coreService services.CoreService) *BotService {
-	pref := tele.Settings{
-		Token:  token,
-		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
-	}
-	bot, err := tele.NewBot(pref)
-	if err != nil {
-		panic(err)
-	}
-
+func NewBotService(bot *tele.Bot, userService services.UserService, coreService services.CoreService) *BotService {
 	bs := &BotService{
 		bot:         bot,
 		userService: userService,

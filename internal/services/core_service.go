@@ -4,6 +4,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/fitz123/mcduck-wallet/internal/database"
@@ -31,12 +32,14 @@ type CoreService interface {
 type coreService struct {
 	db          *database.DB
 	userService UserService
+	notifier    NotificationService
 }
 
-func NewCoreService(db *database.DB, userService UserService) CoreService {
+func NewCoreService(db *database.DB, userService UserService, notifier NotificationService) CoreService {
 	return &coreService{
 		db:          db,
 		userService: userService,
+		notifier:    notifier,
 	}
 }
 
@@ -173,6 +176,14 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 		if err := tx.Create(&toTransaction).Error; err != nil {
 			return err
 		}
+
+		// After successful transaction, send notification
+		message := fmt.Sprintf("You have received %.0f %s from @%s", amount, currencyCode, fromUser.Username)
+		if err := s.notifier.NotifyUser(ctx, toUser.TelegramID, message); err != nil {
+			// Log the error but do not fail the transaction
+			logger.Error("Failed to send notification", "error", err)
+		}
+
 		return nil
 	})
 }
