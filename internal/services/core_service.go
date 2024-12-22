@@ -177,8 +177,8 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 			return err
 		}
 
-		// After successful transaction, send notification
-		message := fmt.Sprintf("You have received %.0f %s from @%s", amount, currencyCode, fromUser.Username)
+		// Updated notification message to use %.2f for amount
+		message := fmt.Sprintf("You have received %.2f %s from @%s", amount, currencyCode, fromUser.Username)
 		if err := s.notifier.NotifyUser(ctx, toUser.TelegramID, message); err != nil {
 			// Log the error but do not fail the transaction
 			logger.Error("Failed to send notification", "error", err)
