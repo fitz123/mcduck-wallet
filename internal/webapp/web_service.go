@@ -37,17 +37,17 @@ func (ws *WebService) ServeHome(w http.ResponseWriter, r *http.Request) {
 func (ws *WebService) GetTransferForm(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r.Context())
 
-	balances, err := ws.coreService.GetBalances(r.Context(), userID)
-	if err != nil {
-		logger.Error("Failed to get balances", "error", err)
-		http.Error(w, "Failed to fetch balances", http.StatusInternalServerError)
-		return
-	}
-
 	user, err := ws.userService.GetUser(r.Context(), userID)
 	if err != nil {
 		logger.Error("Failed to get user", "error", err)
 		http.Error(w, "Failed to fetch user", http.StatusInternalServerError)
+		return
+	}
+
+	balances, err := ws.coreService.GetBalances(r.Context(), userID)
+	if err != nil {
+		logger.Error("Failed to get balances", "error", err)
+		http.Error(w, "Failed to fetch balances", http.StatusInternalServerError)
 		return
 	}
 
@@ -57,7 +57,7 @@ func (ws *WebService) GetTransferForm(w http.ResponseWriter, r *http.Request) {
 		previousRecipients = []string{}
 	}
 
-	component := views.TransferForm(balances, previousRecipients)
+	component := views.TransferForm(balances, previousRecipients, user)
 	if err := component.Render(r.Context(), w); err != nil {
 		logger.Error("Error rendering transfer form", "error", err)
 		http.Error(w, "Error rendering page", http.StatusInternalServerError)
@@ -92,6 +92,24 @@ func (ws *WebService) TransferMoney(w http.ResponseWriter, r *http.Request) {
 			StatusCode: http.StatusBadRequest,
 		})
 		return
+	}
+
+	// Get currency ID for updating last used currency
+	currency, err := ws.coreService.GetCurrencyByCode(r.Context(), currencyCode)
+	if err != nil {
+		ws.handleResponse(w, r, userID, Response{
+			Message:    "Failed to get currency information",
+			Error:      err,
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	// Update last used currency
+	err = ws.userService.UpdateLastUsedCurrency(r.Context(), userID, currency.ID)
+	if err != nil {
+		logger.Error("Failed to update last used currency", "error", err)
+		// Don't return error to user, just log it
 	}
 
 	err = ws.coreService.TransferMoney(r.Context(), userID, toUsername, amount, currencyCode)

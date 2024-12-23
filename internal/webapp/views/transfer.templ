@@ -6,7 +6,7 @@ import (
 	"github.com/fitz123/mcduck-wallet/internal/database"
 )
 
-templ TransferForm(balances []database.Balance, previousRecipients []string) {
+templ TransferForm(balances []database.Balance, previousRecipients []string, user *database.User) {
 	<main data-page="transfer">
 		<header>
 			<h2>Transfer Form</h2>
@@ -29,7 +29,10 @@ templ TransferForm(balances []database.Balance, previousRecipients []string) {
 				Currency
 				<select id="currency" name="currency" required>
 					for _, balance := range balances {
-						<option value={ balance.Currency.Code }>
+						<option
+							value={ balance.Currency.Code }
+							selected?={ user.LastUsedCurrencyID == balance.Currency.ID }
+						>
 							{ balance.Currency.Name } ({ balance.Currency.Code }) - Balance: { fmt.Sprintf("%.2f", balance.Amount) }
 						</option>
 					}
