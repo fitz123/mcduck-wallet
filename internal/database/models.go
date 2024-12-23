@@ -9,11 +9,12 @@ import (
 
 type User struct {
 	gorm.Model
-	TelegramID   int64 `gorm:"uniqueIndex"`
-	Username     string
-	Accounts     []Balance
-	IsAdmin      bool `gorm:"default:false"`
-	Transactions []Transaction
+	TelegramID         int64 `gorm:"uniqueIndex"`
+	Username           string
+	Accounts           []Balance
+	IsAdmin            bool `gorm:"default:false"`
+	Transactions       []Transaction
+	LastUsedCurrencyID uint // New field
 }
 
 type Balance struct {

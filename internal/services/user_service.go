@@ -15,6 +15,7 @@ type UserService interface {
 	CreateUser(ctx context.Context, user *database.User) error
 	UpdateUsername(ctx context.Context, telegramID int64, username string) error
 	IsAdmin(ctx context.Context, telegramID int64) bool
+	UpdateLastUsedCurrency(ctx context.Context, telegramID int64, currencyID uint) error // New method
 }
 
 type userService struct {
@@ -23,6 +24,20 @@ type userService struct {
 
 func NewUserService(db *database.DB) UserService {
 	return &userService{db: db}
+}
+
+func (s *userService) UpdateLastUsedCurrency(ctx context.Context, telegramID int64, currencyID uint) error {
+	result := s.db.Conn.WithContext(ctx).
+		Model(&database.User{}).
+		Where("telegram_id = ?", telegramID).
+		Update("last_used_currency_id", currencyID)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("user not found")
+	}
+	return nil
 }
 
 func (s *userService) GetUser(ctx context.Context, telegramID int64) (*database.User, error) {
