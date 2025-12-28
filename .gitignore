@@ -1,6 +1,9 @@
 # macOS system files
 .DS_Store
 
+# Environment (contains secrets)
+.env
+
 # Binaries
 bin/
 

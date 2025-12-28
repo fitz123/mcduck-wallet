@@ -1,14 +1,12 @@
 # Variables
 BINARY_NAME := mcduck-wallet
-REMOTE_SERVER := mcduck
-REMOTE_PATH := ~/mcduck-wallet
 LDFLAGS := '-linkmode external -extldflags "-static" -s -w'
 
 # Phony targets
-.PHONY: all build transfer deploy clean test run help
+.PHONY: all build deploy update verify clean test run help
 
 # Default target
-all: build transfer clean
+all: update
 
 # Build the binary
 build:
@@ -19,16 +17,17 @@ build:
 	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=x86_64-linux-musl-cc \
 	go build -ldflags $(LDFLAGS) -o bin/$(BINARY_NAME) cmd/$(BINARY_NAME)/main.go
 
-# Transfer the binary to the remote server
-transfer: build
-	@echo "Transferring the binary to the remote server..."
-	command scp ./bin/$(BINARY_NAME) $(REMOTE_SERVER):$(REMOTE_PATH)/bin/$(BINARY_NAME).tmp
+# First-time deployment (sets up user, firewall, systemd)
+deploy:
+	./scripts/deploy.sh
 
-# Deploy the application
-deploy: transfer
-	@echo "Restarting the application on the remote server..."
-	command ssh $(REMOTE_SERVER) 'pkill $(BINARY_NAME) || true; cd $(REMOTE_PATH) && mv bin/$(BINARY_NAME){.tmp,}; nohup ./bin/$(BINARY_NAME) > /dev/null 2>&1 &'
-	@echo "Deployment complete."
+# Update existing deployment
+update:
+	./scripts/update.sh
+
+# Verify deployment
+verify:
+	./scripts/verify.sh
 
 # Clean up
 clean:
@@ -43,17 +42,22 @@ test:
 # Run the application locally
 run:
 	@echo "Running the app..."
-	go run main.go
+	go run cmd/$(BINARY_NAME)/main.go
 
 # Print help information
 help:
-	@echo "Available targets:"
-	@echo "  all        - Build, transfer, and clean (default)"
+	@echo "McDuck Wallet - Makefile targets"
+	@echo ""
+	@echo "Deployment:"
+	@echo "  deploy     - First-time deployment (user, firewall, systemd)"
+	@echo "  update     - Update existing deployment (default)"
+	@echo "  verify     - Check deployment status and logs"
+	@echo ""
+	@echo "Development:"
 	@echo "  build      - Build the binary"
-	@echo "  transfer   - Transfer the binary to the remote server"
-	@echo "  deploy     - Deploy the application to the remote server"
-	@echo "  clean      - Remove the bin directory"
 	@echo "  test       - Run the test suite"
 	@echo "  run        - Run the application locally"
-	@echo "  help       - Print this help information"
-
+	@echo "  clean      - Remove the bin directory"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  Copy .env.example to .env and configure before deploying"
