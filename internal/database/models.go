@@ -47,3 +47,10 @@ type Currency struct {
 	Sign      string
 	IsDefault bool `gorm:"default:false"`
 }
+
+// UserWithBalance is a DTO for listing users with their balances
+type UserWithBalance struct {
+	TelegramID int64
+	Username   string
+	Balances   map[string]float64
+}

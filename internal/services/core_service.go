@@ -20,7 +20,7 @@ type CoreService interface {
 	SetAdminStatus(ctx context.Context, targetUsername string, isAdmin bool) error
 	AdminSetBalance(ctx context.Context, adminTelegramID int64, targetUsername string, amount float64, currencyCode string) error
 	GetCurrencyByCode(ctx context.Context, code string) (*database.Currency, error)
-	ListUsersWithBalances(ctx context.Context) ([]UserWithBalance, error)
+	ListUsersWithBalances(ctx context.Context) ([]database.UserWithBalance, error)
 	DisableUser(ctx context.Context, username string) error
 	AddUser(ctx context.Context, telegramID int64, username string) error
 	DestroyUser(ctx context.Context, username string) error
@@ -305,13 +305,7 @@ func (s *coreService) GetCurrencyByCode(ctx context.Context, code string) (*data
 	return &currency, nil
 }
 
-type UserWithBalance struct {
-	TelegramID int64
-	Username   string
-	Balances   map[string]float64
-}
-
-func (s *coreService) ListUsersWithBalances(ctx context.Context) ([]UserWithBalance, error) {
+func (s *coreService) ListUsersWithBalances(ctx context.Context) ([]database.UserWithBalance, error) {
 	var users []database.User
 	err := s.db.Conn.WithContext(ctx).
 		Preload("Accounts.Currency").
@@ -320,9 +314,9 @@ func (s *coreService) ListUsersWithBalances(ctx context.Context) ([]UserWithBala
 		return nil, err
 	}
 
-	var result []UserWithBalance
+	var result []database.UserWithBalance
 	for _, user := range users {
-		ub := UserWithBalance{
+		ub := database.UserWithBalance{
 			TelegramID: user.TelegramID,
 			Username:   user.Username,
 			Balances:   make(map[string]float64),
