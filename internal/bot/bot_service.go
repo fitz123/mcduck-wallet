@@ -49,6 +49,10 @@ func (bs *BotService) registerHandlers() {
 	bs.bot.Handle("/adduser", bs.handleAdminAddUser)
 	bs.bot.Handle("/addcurrency", bs.handleAddCurrency)
 	bs.bot.Handle("/setdefaultcurrency", bs.handleAdminSetDefaultCurrency)
+
+	// Callback handlers for pagination
+	bs.bot.Handle("\fhistory_prev", bs.handleHistoryCallback)
+	bs.bot.Handle("\fhistory_next", bs.handleHistoryCallback)
 }
 
 func (bs *BotService) handleStart(c tele.Context) error {
@@ -138,22 +142,92 @@ func (bs *BotService) handleTransfer(c tele.Context) error {
 	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, currencyCode, toUsername))
 }
 
+const historyPageSize = 10
+
 func (bs *BotService) handleHistory(c tele.Context) error {
-	ctx := context.Background()
-	transactions, totalCount, err := bs.coreService.GetTransactionHistory(ctx, c.Sender().ID, 0, 10)
+	return bs.sendHistoryPage(c, 0, false)
+}
+
+func (bs *BotService) handleHistoryCallback(c tele.Context) error {
+	data := c.Callback().Data
+	page, err := strconv.Atoi(data)
 	if err != nil {
+		page = 0
+	}
+	return bs.sendHistoryPage(c, page, true)
+}
+
+func (bs *BotService) sendHistoryPage(c tele.Context, page int, isCallback bool) error {
+	ctx := context.Background()
+	offset := page * historyPageSize
+
+	transactions, totalCount, err := bs.coreService.GetTransactionHistory(ctx, c.Sender().ID, offset, historyPageSize)
+	if err != nil {
+		if isCallback {
+			return c.Respond(&tele.CallbackResponse{Text: "Error fetching history"})
+		}
 		return c.Send("Error fetching transaction history: " + err.Error())
 	}
 
-	formattedTransactions := messages.FormatTransactionHistory(transactions)
-	response := fmt.Sprintf("*Transaction History*\n\n%s", strings.Join(formattedTransactions, "\n\n"))
-
-	// Show count if there are more transactions
-	if totalCount > int64(len(transactions)) {
-		response += fmt.Sprintf("\n\n_Showing %d of %d transactions_", len(transactions), totalCount)
+	if len(transactions) == 0 {
+		if isCallback {
+			return c.Respond(&tele.CallbackResponse{Text: "No transactions"})
+		}
+		return c.Send("No transaction history found.")
 	}
 
-	return c.Send(response, &tele.SendOptions{ParseMode: tele.ModeMarkdown})
+	formattedTransactions := messages.FormatTransactionHistory(transactions)
+	totalPages := (int(totalCount) + historyPageSize - 1) / historyPageSize
+	currentPage := page + 1
+
+	response := fmt.Sprintf("*Transaction History* _(page %d/%d)_\n\n%s", currentPage, totalPages, strings.Join(formattedTransactions, "\n\n"))
+
+	// Build pagination keyboard
+	keyboard := bs.buildHistoryKeyboard(page, totalPages)
+
+	if isCallback {
+		_, err = c.Bot().Edit(c.Callback().Message, response, &tele.SendOptions{ParseMode: tele.ModeMarkdown}, keyboard)
+		if err != nil {
+			return c.Respond(&tele.CallbackResponse{Text: "Error updating"})
+		}
+		return c.Respond()
+	}
+
+	return c.Send(response, &tele.SendOptions{ParseMode: tele.ModeMarkdown}, keyboard)
+}
+
+func (bs *BotService) buildHistoryKeyboard(currentPage, totalPages int) *tele.ReplyMarkup {
+	if totalPages <= 1 {
+		return nil
+	}
+
+	var buttons []tele.InlineButton
+
+	// Previous button
+	if currentPage > 0 {
+		buttons = append(buttons, tele.InlineButton{
+			Unique: "history_prev",
+			Text:   "◀ Prev",
+			Data:   strconv.Itoa(currentPage - 1),
+		})
+	}
+
+	// Next button
+	if currentPage < totalPages-1 {
+		buttons = append(buttons, tele.InlineButton{
+			Unique: "history_next",
+			Text:   "Next ▶",
+			Data:   strconv.Itoa(currentPage + 1),
+		})
+	}
+
+	if len(buttons) == 0 {
+		return nil
+	}
+
+	return &tele.ReplyMarkup{
+		InlineKeyboard: [][]tele.InlineButton{buttons},
+	}
 }
 
 // Admin handlers
