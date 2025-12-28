@@ -45,12 +45,12 @@ templ scrollTrigger(nextOffset int) {
 }
 
 templ transactionItem(t database.Transaction) {
-	<article style="display: flex; justify-content: space-between; align-items: center; ">
+	<article style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
 		<!-- Left side: description and date -->
-		<div>
-			<div>
+		<div style="min-width: 0; flex: 1;">
+			<div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
 				<strong>
-					{ transactionDescription(t) }
+					@transactionDescriptionHTML(t)
 				</strong>
 			</div>
 			<small class="secondary">
@@ -58,25 +58,23 @@ templ transactionItem(t database.Transaction) {
 			</small>
 		</div>
 		<!-- Right side: amount -->
-		<strong class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
+		<strong style="flex-shrink: 0;" class={ ternary(t.Amount >= 0, "text-success", "text-error") }>
 			{ fmt.Sprintf("%.2f", t.Amount) } { t.Balance.Currency.Code }
 		</strong>
 	</article>
 }
 
-func transactionDescription(t database.Transaction) string {
+templ transactionDescriptionHTML(t database.Transaction) {
 	switch t.Type {
-	case "transfer_out":
-		return fmt.Sprintf("%s → %s", trUsername(t.FromUsername), trUsername(t.ToUsername))
-	case "transfer_in":
-		return fmt.Sprintf("%s → %s", trUsername(t.FromUsername), trUsername(t.ToUsername))
-	case "exchange_out":
-		return "Exchange (out)"
-	case "exchange_in":
-		return "Exchange (in)"
-	case "admin_set_balance":
-		return fmt.Sprintf("%s SET %s", trUsername(t.FromUsername), trUsername(t.ToUsername))
-	default:
-		return "System"
+		case "transfer_out", "transfer_in":
+			{ t.FromUsername } → { t.ToUsername }
+		case "exchange_out":
+			Exchange (out)
+		case "exchange_in":
+			Exchange (in)
+		case "admin_set_balance":
+			{ t.FromUsername } SET { t.ToUsername }
+		default:
+			System
 	}
 }
