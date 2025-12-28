@@ -64,7 +64,7 @@ type MockCoreService struct {
 	GetBalancesFunc           func(ctx context.Context, telegramID int64) ([]database.Balance, error)
 	GetDefaultCurrencyFunc    func(ctx context.Context) (*database.Currency, error)
 	TransferMoneyFunc         func(ctx context.Context, fromTelegramID int64, toUsername string, amount float64, currencyCode string) error
-	GetTransactionHistoryFunc func(ctx context.Context, telegramID int64) ([]database.Transaction, error)
+	GetTransactionHistoryFunc func(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error)
 	SetAdminStatusFunc        func(ctx context.Context, targetUsername string, isAdmin bool) error
 	AdminSetBalanceFunc       func(ctx context.Context, adminTelegramID int64, targetUsername string, amount float64, currencyCode string) error
 	GetCurrencyByCodeFunc     func(ctx context.Context, code string) (*database.Currency, error)
@@ -98,11 +98,11 @@ func (m *MockCoreService) TransferMoney(ctx context.Context, fromTelegramID int6
 	return nil
 }
 
-func (m *MockCoreService) GetTransactionHistory(ctx context.Context, telegramID int64) ([]database.Transaction, error) {
+func (m *MockCoreService) GetTransactionHistory(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error) {
 	if m.GetTransactionHistoryFunc != nil {
-		return m.GetTransactionHistoryFunc(ctx, telegramID)
+		return m.GetTransactionHistoryFunc(ctx, telegramID, offset, limit)
 	}
-	return nil, nil
+	return nil, 0, nil
 }
 
 func (m *MockCoreService) SetAdminStatus(ctx context.Context, targetUsername string, isAdmin bool) error {
