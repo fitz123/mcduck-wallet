@@ -96,9 +96,9 @@ func TestCoreService_TransferMoney(t *testing.T) {
 		db, svc, mockNotifier := setupCoreServiceTest(t)
 		defer db.Close()
 
-		notificationSent := false
+		notifications := make(map[int64]string)
 		mockNotifier.NotifyUserFunc = func(ctx context.Context, telegramID int64, message string) error {
-			notificationSent = true
+			notifications[telegramID] = message
 			return nil
 		}
 
@@ -126,9 +126,15 @@ func TestCoreService_TransferMoney(t *testing.T) {
 			t.Errorf("Receiver balance = %v, want 50", receiverBalance.Amount)
 		}
 
-		// Verify notification was sent
-		if !notificationSent {
-			t.Error("Notification should have been sent to receiver")
+		// Verify both sender and receiver got notifications
+		if len(notifications) != 2 {
+			t.Errorf("Expected 2 notifications, got %d", len(notifications))
+		}
+		if _, ok := notifications[10001]; !ok {
+			t.Error("Sender should have received notification")
+		}
+		if _, ok := notifications[10002]; !ok {
+			t.Error("Receiver should have received notification")
 		}
 	})
 
@@ -551,9 +557,17 @@ func TestCoreService_GetTransactionHistory(t *testing.T) {
 func TestCoreService_AdminSetBalance(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("admin can set balance", func(t *testing.T) {
-		db, svc, _ := setupCoreServiceTest(t)
+	t.Run("admin can set balance and user is notified", func(t *testing.T) {
+		db, svc, mockNotifier := setupCoreServiceTest(t)
 		defer db.Close()
+
+		var notifiedUser int64
+		var notificationMsg string
+		mockNotifier.NotifyUserFunc = func(ctx context.Context, telegramID int64, message string) error {
+			notifiedUser = telegramID
+			notificationMsg = message
+			return nil
+		}
 
 		admin := testutil.CreateTestUser(t, db, 90001, "admin", true)
 		target := testutil.CreateTestUser(t, db, 90002, "target", false)
@@ -569,6 +583,14 @@ func TestCoreService_AdminSetBalance(t *testing.T) {
 		db.Conn.Where("user_id = ?", target.ID).First(&balance)
 		if balance.Amount != 500 {
 			t.Errorf("AdminSetBalance() balance = %v, want 500", balance.Amount)
+		}
+
+		// Verify notification was sent to target user
+		if notifiedUser != target.TelegramID {
+			t.Errorf("Notification sent to %d, want %d", notifiedUser, target.TelegramID)
+		}
+		if notificationMsg == "" {
+			t.Error("Notification message should not be empty")
 		}
 	})
 

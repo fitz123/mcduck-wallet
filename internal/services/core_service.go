@@ -177,11 +177,16 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 			return err
 		}
 
-		// Updated notification message to use %.2f for amount
-		message := fmt.Sprintf("You have received %.2f %s from @%s", amount, currencyCode, fromUser.Username)
-		if err := s.notifier.NotifyUser(ctx, toUser.TelegramID, message); err != nil {
-			// Log the error but do not fail the transaction
-			logger.Error("Failed to send notification", "error", err)
+		// Notify sender
+		senderMessage := fmt.Sprintf("You sent %.2f %s to @%s", amount, currencyCode, toUser.Username)
+		if err := s.notifier.NotifyUser(ctx, fromUser.TelegramID, senderMessage); err != nil {
+			logger.Error("Failed to send sender notification", "error", err)
+		}
+
+		// Notify recipient
+		recipientMessage := fmt.Sprintf("You received %.2f %s from @%s", amount, currencyCode, fromUser.Username)
+		if err := s.notifier.NotifyUser(ctx, toUser.TelegramID, recipientMessage); err != nil {
+			logger.Error("Failed to send recipient notification", "error", err)
 		}
 
 		return nil
@@ -312,6 +317,12 @@ func (s *coreService) AdminSetBalance(ctx context.Context, adminTelegramID int64
 
 		if err := tx.Create(&transaction).Error; err != nil {
 			return err
+		}
+
+		// Notify user about balance change
+		message := fmt.Sprintf("Admin set your %s balance to %.2f", currencyCode, amount)
+		if err := s.notifier.NotifyUser(ctx, targetUser.TelegramID, message); err != nil {
+			logger.Error("Failed to send admin balance notification", "error", err)
 		}
 
 		return nil
