@@ -228,12 +228,6 @@ main() {
     echo ""
     echo "═══════════════════════════════════════════════════════"
     success "Deployment complete!"
-    echo ""
-    echo -e "${BLUE}Next steps:${NC}"
-    echo "  1. Migrate database: scp mcduck:~/mcduck-wallet/mcduck_wallet.db ${REMOTE_USER}@${SERVER}:~/mcduck-wallet/"
-    echo "  2. Update Cloudflare DNS: mcduck.120912.xyz → $SERVER"
-    echo "  3. Update ssh-mcduck shortcut"
-    echo ""
 }
 
 main "$@"

@@ -47,7 +47,8 @@ func main() {
 	// Initialize services
 	userService := services.NewUserService(db)
 	notificationService := services.NewNotificationService(botInstance)
-	coreService := services.NewCoreService(db, userService, notificationService)
+	exchangeService := services.NewExchangeService()
+	coreService := services.NewCoreService(db, userService, notificationService, exchangeService)
 	botService := bot.NewBotService(botInstance, userService, coreService)
 	webService := webapp.NewWebService(userService, coreService, cfg.TelegramToken)
 

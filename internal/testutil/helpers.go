@@ -81,3 +81,19 @@ func GetDefaultCurrency(t *testing.T, db *database.DB) *database.Currency {
 	}
 	return &currency
 }
+
+// CreateTestCurrencyWithRate creates a currency with IsReal and FixedRate fields
+func CreateTestCurrencyWithRate(t *testing.T, db *database.DB, code, name, sign string, isReal bool, fixedRate float64) *database.Currency {
+	t.Helper()
+	currency := &database.Currency{
+		Code:      code,
+		Name:      name,
+		Sign:      sign,
+		IsReal:    isReal,
+		FixedRate: fixedRate,
+	}
+	if err := db.Conn.Create(currency).Error; err != nil {
+		t.Fatalf("Failed to create test currency: %v", err)
+	}
+	return currency
+}

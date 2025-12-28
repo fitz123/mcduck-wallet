@@ -20,7 +20,8 @@ func setupCoreServiceTest(t *testing.T) (*database.DB, CoreService, *testutil.Mo
 	db := testutil.SetupTestDB(t)
 	userService := NewUserService(db)
 	mockNotifier := &testutil.MockNotificationService{}
-	coreService := NewCoreService(db, userService, mockNotifier)
+	exchangeService := NewExchangeService() // Use real exchange service for testing
+	coreService := NewCoreService(db, userService, mockNotifier, exchangeService)
 	return db, coreService, mockNotifier
 }
 
@@ -636,8 +637,8 @@ func TestCoreService_AddCurrency(t *testing.T) {
 	defer db.Close()
 	ctx := context.Background()
 
-	t.Run("adds new currency", func(t *testing.T) {
-		err := svc.AddCurrency(ctx, "GBP", "British Pound", "£")
+	t.Run("adds new real currency", func(t *testing.T) {
+		err := svc.AddCurrency(ctx, "GBP", "British Pound", "£", true, 0)
 		if err != nil {
 			t.Fatalf("AddCurrency() error = %v", err)
 		}
@@ -650,11 +651,30 @@ func TestCoreService_AddCurrency(t *testing.T) {
 		if currency.Sign != "£" {
 			t.Errorf("AddCurrency() sign = %v, want £", currency.Sign)
 		}
+		if !currency.IsReal {
+			t.Error("AddCurrency() IsReal should be true")
+		}
+	})
+
+	t.Run("adds made-up currency with rate", func(t *testing.T) {
+		err := svc.AddCurrency(ctx, "SHL", "Shell", "🐚", false, 10.0)
+		if err != nil {
+			t.Fatalf("AddCurrency() error = %v", err)
+		}
+
+		var currency database.Currency
+		db.Conn.Where("code = ?", "SHL").First(&currency)
+		if currency.FixedRate != 10.0 {
+			t.Errorf("AddCurrency() FixedRate = %v, want 10.0", currency.FixedRate)
+		}
+		if currency.IsReal {
+			t.Error("AddCurrency() IsReal should be false")
+		}
 	})
 
 	t.Run("rejects duplicate code", func(t *testing.T) {
-		svc.AddCurrency(ctx, "JPY", "Japanese Yen", "¥")
-		err := svc.AddCurrency(ctx, "JPY", "Duplicate Yen", "Y")
+		svc.AddCurrency(ctx, "JPY", "Japanese Yen", "¥", true, 0)
+		err := svc.AddCurrency(ctx, "JPY", "Duplicate Yen", "Y", true, 0)
 		if err == nil {
 			t.Error("AddCurrency() should reject duplicate code")
 		}
@@ -802,6 +822,174 @@ func TestCoreService_DestroyUser(t *testing.T) {
 		db.Conn.Unscoped().Model(&database.Transaction{}).Where("user_id = ?", user.ID).Count(&count)
 		if count != 0 {
 			t.Error("DestroyUser() transactions should be deleted")
+		}
+	})
+}
+
+func TestCoreService_ExchangeMoney(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("exchanges between made-up currencies", func(t *testing.T) {
+		db, svc, mockNotifier := setupCoreServiceTest(t)
+		defer db.Close()
+
+		mockNotifier.NotifyUserFunc = func(ctx context.Context, telegramID int64, message string) error {
+			return nil
+		}
+
+		user := testutil.CreateTestUser(t, db, 130001, "exchanger", false)
+		shl := testutil.CreateTestCurrencyWithRate(t, db, "SHL", "Shell", "S", false, 10.0)
+		gold := testutil.CreateTestCurrencyWithRate(t, db, "GOLD", "Gold", "G", false, 0.1)
+		testutil.CreateTestBalance(t, db, user.ID, shl.ID, 100) // 100 SHL
+
+		// Exchange 100 SHL -> GOLD (rate: 0.01, result: 1 GOLD)
+		err := svc.ExchangeMoney(ctx, 130001, "SHL", "GOLD", 100)
+		if err != nil {
+			t.Fatalf("ExchangeMoney() error = %v", err)
+		}
+
+		// Verify SHL balance is now 0
+		var shlBalance database.Balance
+		db.Conn.Where("user_id = ? AND currency_id = ?", user.ID, shl.ID).First(&shlBalance)
+		if shlBalance.Amount != 0 {
+			t.Errorf("SHL balance = %v, want 0", shlBalance.Amount)
+		}
+
+		// Verify GOLD balance is 1
+		var goldBalance database.Balance
+		db.Conn.Where("user_id = ? AND currency_id = ?", user.ID, gold.ID).First(&goldBalance)
+		if goldBalance.Amount != 1 {
+			t.Errorf("GOLD balance = %v, want 1", goldBalance.Amount)
+		}
+	})
+
+	t.Run("rejects exchange with insufficient balance", func(t *testing.T) {
+		db, svc, _ := setupCoreServiceTest(t)
+		defer db.Close()
+
+		user := testutil.CreateTestUser(t, db, 130002, "poorexchanger", false)
+		shl := testutil.CreateTestCurrencyWithRate(t, db, "SHL2", "Shell", "S", false, 10.0)
+		testutil.CreateTestCurrencyWithRate(t, db, "GOLD2", "Gold", "G", false, 0.1)
+		testutil.CreateTestBalance(t, db, user.ID, shl.ID, 10) // Only 10 SHL
+
+		err := svc.ExchangeMoney(ctx, 130002, "SHL2", "GOLD2", 100)
+		if err == nil {
+			t.Error("ExchangeMoney() should reject insufficient balance")
+		}
+	})
+
+	t.Run("rejects exchange to same currency", func(t *testing.T) {
+		db, svc, _ := setupCoreServiceTest(t)
+		defer db.Close()
+
+		user := testutil.CreateTestUser(t, db, 130003, "sameexchanger", false)
+		shl := testutil.CreateTestCurrencyWithRate(t, db, "SHL3", "Shell", "S", false, 10.0)
+		testutil.CreateTestBalance(t, db, user.ID, shl.ID, 100)
+
+		err := svc.ExchangeMoney(ctx, 130003, "SHL3", "SHL3", 50)
+		if err == nil {
+			t.Error("ExchangeMoney() should reject same currency exchange")
+		}
+	})
+
+	t.Run("creates transaction records for exchange", func(t *testing.T) {
+		db, svc, mockNotifier := setupCoreServiceTest(t)
+		defer db.Close()
+
+		mockNotifier.NotifyUserFunc = func(ctx context.Context, telegramID int64, message string) error {
+			return nil
+		}
+
+		user := testutil.CreateTestUser(t, db, 130004, "txexchanger", false)
+		shl := testutil.CreateTestCurrencyWithRate(t, db, "SHL4", "Shell", "S", false, 10.0)
+		testutil.CreateTestCurrencyWithRate(t, db, "GOLD4", "Gold", "G", false, 0.1) // target currency
+		testutil.CreateTestBalance(t, db, user.ID, shl.ID, 100)
+
+		err := svc.ExchangeMoney(ctx, 130004, "SHL4", "GOLD4", 100)
+		if err != nil {
+			t.Fatalf("ExchangeMoney() error = %v", err)
+		}
+
+		// Verify exchange_out transaction
+		var outTx database.Transaction
+		result := db.Conn.Where("user_id = ? AND type = ?", user.ID, "exchange_out").First(&outTx)
+		if result.Error != nil {
+			t.Fatal("exchange_out transaction not found")
+		}
+		if outTx.Amount != -100 {
+			t.Errorf("exchange_out amount = %v, want -100", outTx.Amount)
+		}
+
+		// Verify exchange_in transaction
+		var inTx database.Transaction
+		result = db.Conn.Where("user_id = ? AND type = ?", user.ID, "exchange_in").First(&inTx)
+		if result.Error != nil {
+			t.Fatal("exchange_in transaction not found")
+		}
+		if inTx.Amount != 1 {
+			t.Errorf("exchange_in amount = %v, want 1", inTx.Amount)
+		}
+
+		// Verify both transactions share same ExchangeRef
+		if outTx.ExchangeRef == "" || outTx.ExchangeRef != inTx.ExchangeRef {
+			t.Error("Exchange transactions should share same ExchangeRef")
+		}
+	})
+}
+
+func TestCoreService_GetExchangeRate(t *testing.T) {
+	db, svc, _ := setupCoreServiceTest(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	t.Run("returns rate for made-up currencies", func(t *testing.T) {
+		testutil.CreateTestCurrencyWithRate(t, db, "SHL5", "Shell", "S", false, 10.0)
+		testutil.CreateTestCurrencyWithRate(t, db, "GOLD5", "Gold", "G", false, 0.1)
+
+		rate, err := svc.GetExchangeRate(ctx, "SHL5", "GOLD5")
+		if err != nil {
+			t.Fatalf("GetExchangeRate() error = %v", err)
+		}
+		// Rate: to.FixedRate / from.FixedRate = 0.1 / 10 = 0.01
+		if rate != 0.01 {
+			t.Errorf("GetExchangeRate() = %v, want 0.01", rate)
+		}
+	})
+
+	t.Run("returns error for unknown currency", func(t *testing.T) {
+		_, err := svc.GetExchangeRate(ctx, "UNKNOWN", "USD")
+		if err == nil {
+			t.Error("GetExchangeRate() should error for unknown currency")
+		}
+	})
+}
+
+func TestCoreService_SetCurrencyRate(t *testing.T) {
+	db, svc, _ := setupCoreServiceTest(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	t.Run("updates fixed rate for made-up currency", func(t *testing.T) {
+		testutil.CreateTestCurrencyWithRate(t, db, "TOKEN", "Token", "T", false, 5.0)
+
+		err := svc.SetCurrencyRate(ctx, "TOKEN", 20.0)
+		if err != nil {
+			t.Fatalf("SetCurrencyRate() error = %v", err)
+		}
+
+		var currency database.Currency
+		db.Conn.Where("code = ?", "TOKEN").First(&currency)
+		if currency.FixedRate != 20.0 {
+			t.Errorf("FixedRate = %v, want 20.0", currency.FixedRate)
+		}
+	})
+
+	t.Run("rejects setting rate for real currency", func(t *testing.T) {
+		testutil.CreateTestCurrencyWithRate(t, db, "EUR", "Euro", "E", true, 0)
+
+		err := svc.SetCurrencyRate(ctx, "EUR", 1.5)
+		if err == nil {
+			t.Error("SetCurrencyRate() should reject real currency")
 		}
 	})
 }

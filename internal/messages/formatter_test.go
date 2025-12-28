@@ -103,6 +103,52 @@ func TestFormatTransactionHistory(t *testing.T) {
 		}
 	})
 
+	t.Run("formats exchange_out transaction", func(t *testing.T) {
+		tx := database.Transaction{
+			Type:         "exchange_out",
+			Amount:       -100.00,
+			FromUsername: "user",
+			ToUsername:   "user",
+			Timestamp:    time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+			BalanceAfter: 0.00,
+			Balance: database.Balance{
+				Currency: database.Currency{Sign: "S", Code: "SHL"},
+			},
+		}
+
+		result := FormatTransactionHistory([]database.Transaction{tx})
+
+		if !strings.Contains(result[0], "Exchanged") {
+			t.Errorf("Result should contain 'Exchanged': %v", result[0])
+		}
+		if !strings.Contains(result[0], "S100.00") {
+			t.Errorf("Result should contain 'S100.00': %v", result[0])
+		}
+	})
+
+	t.Run("formats exchange_in transaction", func(t *testing.T) {
+		tx := database.Transaction{
+			Type:         "exchange_in",
+			Amount:       780.00,
+			FromUsername: "user",
+			ToUsername:   "user",
+			Timestamp:    time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+			BalanceAfter: 780.00,
+			Balance: database.Balance{
+				Currency: database.Currency{Sign: "₽", Code: "RUB"},
+			},
+		}
+
+		result := FormatTransactionHistory([]database.Transaction{tx})
+
+		if !strings.Contains(result[0], "Received from exchange") {
+			t.Errorf("Result should contain 'Received from exchange': %v", result[0])
+		}
+		if !strings.Contains(result[0], "₽780.00") {
+			t.Errorf("Result should contain '₽780.00': %v", result[0])
+		}
+	})
+
 	t.Run("handles unknown transaction type", func(t *testing.T) {
 		tx := database.Transaction{
 			Type:         "unknown_type",

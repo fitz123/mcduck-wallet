@@ -25,6 +25,12 @@ func FormatTransactionHistory(transactions []database.Transaction) []string {
 		case "transfer_in":
 			description = "Received from"
 			otherParty = truncateUsername(t.FromUsername)
+		case "exchange_out":
+			description = "Exchanged"
+			otherParty = ""
+		case "exchange_in":
+			description = "Received from exchange"
+			otherParty = ""
 		case "admin_set_balance":
 			description = "Set by admin"
 			otherParty = truncateUsername(t.FromUsername)

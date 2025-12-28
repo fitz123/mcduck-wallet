@@ -13,8 +13,11 @@ func RegisterRoutes(r chi.Router, webService *webapp.WebService) {
 		r.Get("/dashboard", webService.GetDashboard)
 		r.Get("/transfer-form", webService.GetTransferForm)
 		r.Post("/transfer", webService.TransferMoney)
+		r.Get("/exchange-form", webService.GetExchangeForm)
+		r.Get("/exchange-preview", webService.GetExchangePreview)
+		r.Post("/exchange", webService.ExchangeMoney)
 		r.Get("/history", webService.GetTransactionHistory)
-		r.Get("/add-currency-form", webService.GetAddCurrencyForm) // New route
+		r.Get("/add-currency-form", webService.GetAddCurrencyForm)
 		r.Post("/add-currency", webService.AddCurrency)
 	})
 }
