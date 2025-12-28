@@ -334,10 +334,10 @@ func TestWebService_GetTransactionHistory(t *testing.T) {
 	t.Run("returns transaction history", func(t *testing.T) {
 		ws, _, mockCoreService := setupWebServiceTest()
 
-		mockCoreService.GetTransactionHistoryFunc = func(ctx context.Context, telegramID int64) ([]database.Transaction, error) {
+		mockCoreService.GetTransactionHistoryFunc = func(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error) {
 			return []database.Transaction{
 				{Amount: 50, Type: "transfer_in"},
-			}, nil
+			}, 1, nil
 		}
 
 		req := httptest.NewRequest("GET", "/history", nil)
@@ -354,8 +354,8 @@ func TestWebService_GetTransactionHistory(t *testing.T) {
 	t.Run("handles error", func(t *testing.T) {
 		ws, _, mockCoreService := setupWebServiceTest()
 
-		mockCoreService.GetTransactionHistoryFunc = func(ctx context.Context, telegramID int64) ([]database.Transaction, error) {
-			return nil, errors.New("database error")
+		mockCoreService.GetTransactionHistoryFunc = func(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error) {
+			return nil, 0, errors.New("database error")
 		}
 
 		req := httptest.NewRequest("GET", "/history", nil)

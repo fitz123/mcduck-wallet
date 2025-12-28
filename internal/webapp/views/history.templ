@@ -5,18 +5,43 @@ import (
 	"github.com/fitz123/mcduck-wallet/internal/database"
 )
 
-templ TransactionHistory(transactions []database.Transaction) {
+templ TransactionHistory(transactions []database.Transaction, nextOffset int, hasMore bool) {
 	<main data-page="history">
 		<h2>Transaction History</h2>
-		for _, t := range transactions {
-			@transactionItem(t)
-		}
+		<div id="transaction-list">
+			for _, t := range transactions {
+				@transactionItem(t)
+			}
+			if hasMore {
+				@scrollTrigger(nextOffset)
+			}
+		</div>
 		<div>
 			<button hx-get="/dashboard" hx-target="body">
 				Back to Balances
 			</button>
 		</div>
 	</main>
+}
+
+// TransactionItems renders just the transaction items for infinite scroll
+templ TransactionItems(transactions []database.Transaction, nextOffset int, hasMore bool) {
+	for _, t := range transactions {
+		@transactionItem(t)
+	}
+	if hasMore {
+		@scrollTrigger(nextOffset)
+	}
+}
+
+templ scrollTrigger(nextOffset int) {
+	<div
+		hx-get={ fmt.Sprintf("/history?offset=%d", nextOffset) }
+		hx-trigger="revealed"
+		hx-swap="outerHTML"
+	>
+		<small class="secondary">Loading more...</small>
+	</div>
 }
 
 templ transactionItem(t database.Transaction) {

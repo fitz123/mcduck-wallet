@@ -140,13 +140,19 @@ func (bs *BotService) handleTransfer(c tele.Context) error {
 
 func (bs *BotService) handleHistory(c tele.Context) error {
 	ctx := context.Background()
-	transactions, err := bs.coreService.GetTransactionHistory(ctx, c.Sender().ID)
+	transactions, totalCount, err := bs.coreService.GetTransactionHistory(ctx, c.Sender().ID, 0, 10)
 	if err != nil {
 		return c.Send("Error fetching transaction history: " + err.Error())
 	}
 
 	formattedTransactions := messages.FormatTransactionHistory(transactions)
 	response := fmt.Sprintf("*Transaction History*\n\n%s", strings.Join(formattedTransactions, "\n\n"))
+
+	// Show count if there are more transactions
+	if totalCount > int64(len(transactions)) {
+		response += fmt.Sprintf("\n\n_Showing %d of %d transactions_", len(transactions), totalCount)
+	}
+
 	return c.Send(response, &tele.SendOptions{ParseMode: tele.ModeMarkdown})
 }
 

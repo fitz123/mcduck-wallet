@@ -421,11 +421,12 @@ func TestCoreService_ListUsersWithBalances(t *testing.T) {
 }
 
 func TestCoreService_GetTransactionHistory(t *testing.T) {
-	db, svc, _ := setupCoreServiceTest(t)
-	defer db.Close()
 	ctx := context.Background()
 
-	t.Run("returns transaction history", func(t *testing.T) {
+	t.Run("returns transaction history with total count", func(t *testing.T) {
+		db, svc, _ := setupCoreServiceTest(t)
+		defer db.Close()
+
 		user := testutil.CreateTestUser(t, db, 80001, "historyuser", false)
 		currency := testutil.GetDefaultCurrency(t, db)
 		balance := testutil.CreateTestBalance(t, db, user.ID, currency.ID, 100)
@@ -445,16 +446,22 @@ func TestCoreService_GetTransactionHistory(t *testing.T) {
 		}
 		db.Conn.Create(tx)
 
-		history, err := svc.GetTransactionHistory(ctx, 80001)
+		history, totalCount, err := svc.GetTransactionHistory(ctx, 80001, 0, 10)
 		if err != nil {
 			t.Fatalf("GetTransactionHistory() error = %v", err)
 		}
 		if len(history) != 1 {
 			t.Errorf("GetTransactionHistory() count = %v, want 1", len(history))
 		}
+		if totalCount != 1 {
+			t.Errorf("GetTransactionHistory() totalCount = %v, want 1", totalCount)
+		}
 	})
 
-	t.Run("limits to 10 transactions", func(t *testing.T) {
+	t.Run("respects limit parameter", func(t *testing.T) {
+		db, svc, _ := setupCoreServiceTest(t)
+		defer db.Close()
+
 		user := testutil.CreateTestUser(t, db, 80002, "manyhistory", false)
 		currency := testutil.GetDefaultCurrency(t, db)
 		balance := testutil.CreateTestBalance(t, db, user.ID, currency.ID, 1000)
@@ -472,16 +479,56 @@ func TestCoreService_GetTransactionHistory(t *testing.T) {
 			db.Conn.Create(tx)
 		}
 
-		history, err := svc.GetTransactionHistory(ctx, 80002)
+		history, totalCount, err := svc.GetTransactionHistory(ctx, 80002, 0, 10)
 		if err != nil {
 			t.Fatalf("GetTransactionHistory() error = %v", err)
 		}
 		if len(history) != 10 {
 			t.Errorf("GetTransactionHistory() count = %v, want 10 (limited)", len(history))
 		}
+		if totalCount != 15 {
+			t.Errorf("GetTransactionHistory() totalCount = %v, want 15", totalCount)
+		}
+	})
+
+	t.Run("respects offset for pagination", func(t *testing.T) {
+		db, svc, _ := setupCoreServiceTest(t)
+		defer db.Close()
+
+		user := testutil.CreateTestUser(t, db, 80004, "offsetuser", false)
+		currency := testutil.GetDefaultCurrency(t, db)
+		balance := testutil.CreateTestBalance(t, db, user.ID, currency.ID, 1000)
+
+		// Create 15 transactions with distinct amounts
+		for i := 0; i < 15; i++ {
+			tx := &database.Transaction{
+				UserID:       user.ID,
+				BalanceID:    balance.ID,
+				Amount:       float64(15 - i), // 15, 14, 13, ... 1
+				Type:         "transfer_in",
+				Timestamp:    time.Now().Add(time.Duration(i) * time.Minute),
+				BalanceAfter: float64(100 + i),
+			}
+			db.Conn.Create(tx)
+		}
+
+		// Get second page
+		history, totalCount, err := svc.GetTransactionHistory(ctx, 80004, 10, 10)
+		if err != nil {
+			t.Fatalf("GetTransactionHistory() error = %v", err)
+		}
+		if len(history) != 5 {
+			t.Errorf("GetTransactionHistory() count = %v, want 5 (remaining)", len(history))
+		}
+		if totalCount != 15 {
+			t.Errorf("GetTransactionHistory() totalCount = %v, want 15", totalCount)
+		}
 	})
 
 	t.Run("orders by timestamp descending", func(t *testing.T) {
+		db, svc, _ := setupCoreServiceTest(t)
+		defer db.Close()
+
 		user := testutil.CreateTestUser(t, db, 80003, "orderuser", false)
 		currency := testutil.GetDefaultCurrency(t, db)
 		balance := testutil.CreateTestBalance(t, db, user.ID, currency.ID, 100)
@@ -494,7 +541,7 @@ func TestCoreService_GetTransactionHistory(t *testing.T) {
 		db.Conn.Create(tx2)
 		db.Conn.Create(tx3)
 
-		history, _ := svc.GetTransactionHistory(ctx, 80003)
+		history, _, _ := svc.GetTransactionHistory(ctx, 80003, 0, 10)
 		if history[0].Amount != 3 {
 			t.Errorf("First transaction amount = %v, want 3 (most recent)", history[0].Amount)
 		}

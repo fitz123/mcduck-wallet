@@ -16,7 +16,7 @@ type CoreService interface {
 	GetBalances(ctx context.Context, telegramID int64) ([]database.Balance, error)
 	GetDefaultCurrency(ctx context.Context) (*database.Currency, error)
 	TransferMoney(ctx context.Context, fromTelegramID int64, toUsername string, amount float64, currencyCode string) error
-	GetTransactionHistory(ctx context.Context, telegramID int64) ([]database.Transaction, error)
+	GetTransactionHistory(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error)
 	SetAdminStatus(ctx context.Context, targetUsername string, isAdmin bool) error
 	AdminSetBalance(ctx context.Context, adminTelegramID int64, targetUsername string, amount float64, currencyCode string) error
 	GetCurrencyByCode(ctx context.Context, code string) (*database.Currency, error)
@@ -188,23 +188,46 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 	})
 }
 
-func (s *coreService) GetTransactionHistory(ctx context.Context, telegramID int64) ([]database.Transaction, error) {
+func (s *coreService) GetTransactionHistory(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error) {
 	user, err := s.userService.GetUser(ctx, telegramID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
+	// Enforce limits
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get total count
+	var totalCount int64
+	err = s.db.Conn.WithContext(ctx).
+		Model(&database.Transaction{}).
+		Where("user_id = ?", user.ID).
+		Count(&totalCount).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated transactions
 	var transactions []database.Transaction
 	err = s.db.Conn.WithContext(ctx).
 		Where("user_id = ?", user.ID).
 		Preload("Balance.Currency").
 		Order("timestamp desc").
-		Limit(10).
+		Offset(offset).
+		Limit(limit).
 		Find(&transactions).Error
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return transactions, nil
+	return transactions, totalCount, nil
 }
 
 // Admin functions

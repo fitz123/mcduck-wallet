@@ -130,15 +130,35 @@ func (ws *WebService) TransferMoney(w http.ResponseWriter, r *http.Request) {
 func (ws *WebService) GetTransactionHistory(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r.Context())
 
-	transactions, err := ws.coreService.GetTransactionHistory(r.Context(), userID)
+	// Parse pagination params
+	offset := 0
+	limit := 10
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		if parsed, err := strconv.Atoi(offsetStr); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	transactions, totalCount, err := ws.coreService.GetTransactionHistory(r.Context(), userID, offset, limit)
 	if err != nil {
 		logger.Error("Failed to get transaction history", "error", err)
 		http.Error(w, "Failed to fetch transaction history", http.StatusInternalServerError)
 		return
 	}
 
-	component := views.TransactionHistory(transactions)
-	templ.Handler(component).ServeHTTP(w, r)
+	// Check if this is an HTMX request for infinite scroll
+	isHTMX := r.Header.Get("HX-Request") == "true"
+	hasMore := int64(offset+len(transactions)) < totalCount
+
+	if isHTMX {
+		// Return only the transaction items for infinite scroll
+		component := views.TransactionItems(transactions, offset+limit, hasMore)
+		templ.Handler(component).ServeHTTP(w, r)
+	} else {
+		// Return full page
+		component := views.TransactionHistory(transactions, offset+limit, hasMore)
+		templ.Handler(component).ServeHTTP(w, r)
+	}
 }
 
 func (ws *WebService) AuthMiddleware(next http.Handler) http.Handler {
