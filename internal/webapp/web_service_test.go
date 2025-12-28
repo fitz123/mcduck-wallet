@@ -378,7 +378,7 @@ func TestWebService_AddCurrency(t *testing.T) {
 		mockUserService.GetUserFunc = func(ctx context.Context, telegramID int64) (*database.User, error) {
 			return &database.User{TelegramID: telegramID, Username: "admin"}, nil
 		}
-		mockCoreService.AddCurrencyFunc = func(ctx context.Context, code, name, sign string) error {
+		mockCoreService.AddCurrencyFunc = func(ctx context.Context, code, name, sign string, isReal bool, fixedRate float64) error {
 			addedCode = code
 			addedName = name
 			addedSign = sign

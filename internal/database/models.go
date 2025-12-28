@@ -38,14 +38,18 @@ type Transaction struct {
 	ToUsername   string
 	Timestamp    time.Time
 	BalanceAfter float64
+	ExchangeRef  string  // UUID linking exchange_out and exchange_in transactions
+	ExchangeRate float64 // Exchange rate used (for audit trail)
 }
 
 type Currency struct {
 	gorm.Model
-	Code      string `gorm:"uniqueIndex"`
+	Code      string  `gorm:"uniqueIndex"`
 	Name      string
 	Sign      string
-	IsDefault bool `gorm:"default:false"`
+	IsDefault bool    `gorm:"default:false"`
+	IsReal    bool    `gorm:"default:false"` // true for real currencies (USD, EUR), false for made-up (SHL)
+	FixedRate float64 `gorm:"default:0"`     // For made-up currencies: units per 1 USD
 }
 
 // UserWithBalance is a DTO for listing users with their balances

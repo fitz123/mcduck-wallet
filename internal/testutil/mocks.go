@@ -72,9 +72,13 @@ type MockCoreService struct {
 	DisableUserFunc           func(ctx context.Context, username string) error
 	AddUserFunc               func(ctx context.Context, telegramID int64, username string) error
 	DestroyUserFunc           func(ctx context.Context, username string) error
-	AddCurrencyFunc           func(ctx context.Context, code, name, sign string) error
+	AddCurrencyFunc           func(ctx context.Context, code, name, sign string, isReal bool, fixedRate float64) error
 	SetDefaultCurrencyFunc    func(ctx context.Context, code string) error
 	GetPreviousRecipientsFunc func(ctx context.Context, userID uint) ([]string, error)
+	ExchangeMoneyFunc         func(ctx context.Context, telegramID int64, fromCurrencyCode, toCurrencyCode string, amount float64) error
+	GetExchangeRateFunc       func(ctx context.Context, fromCurrencyCode, toCurrencyCode string) (float64, error)
+	SetCurrencyRateFunc       func(ctx context.Context, currencyCode string, rate float64) error
+	ListCurrenciesFunc        func(ctx context.Context) ([]database.Currency, error)
 }
 
 func (m *MockCoreService) GetBalances(ctx context.Context, telegramID int64) ([]database.Balance, error) {
@@ -154,9 +158,9 @@ func (m *MockCoreService) DestroyUser(ctx context.Context, username string) erro
 	return nil
 }
 
-func (m *MockCoreService) AddCurrency(ctx context.Context, code, name, sign string) error {
+func (m *MockCoreService) AddCurrency(ctx context.Context, code, name, sign string, isReal bool, fixedRate float64) error {
 	if m.AddCurrencyFunc != nil {
-		return m.AddCurrencyFunc(ctx, code, name, sign)
+		return m.AddCurrencyFunc(ctx, code, name, sign, isReal, fixedRate)
 	}
 	return nil
 }
@@ -173,6 +177,54 @@ func (m *MockCoreService) GetPreviousRecipients(ctx context.Context, userID uint
 		return m.GetPreviousRecipientsFunc(ctx, userID)
 	}
 	return nil, nil
+}
+
+func (m *MockCoreService) ExchangeMoney(ctx context.Context, telegramID int64, fromCurrencyCode, toCurrencyCode string, amount float64) error {
+	if m.ExchangeMoneyFunc != nil {
+		return m.ExchangeMoneyFunc(ctx, telegramID, fromCurrencyCode, toCurrencyCode, amount)
+	}
+	return nil
+}
+
+func (m *MockCoreService) GetExchangeRate(ctx context.Context, fromCurrencyCode, toCurrencyCode string) (float64, error) {
+	if m.GetExchangeRateFunc != nil {
+		return m.GetExchangeRateFunc(ctx, fromCurrencyCode, toCurrencyCode)
+	}
+	return 1.0, nil
+}
+
+func (m *MockCoreService) SetCurrencyRate(ctx context.Context, currencyCode string, rate float64) error {
+	if m.SetCurrencyRateFunc != nil {
+		return m.SetCurrencyRateFunc(ctx, currencyCode, rate)
+	}
+	return nil
+}
+
+func (m *MockCoreService) ListCurrencies(ctx context.Context) ([]database.Currency, error) {
+	if m.ListCurrenciesFunc != nil {
+		return m.ListCurrenciesFunc(ctx)
+	}
+	return nil, nil
+}
+
+// MockExchangeService is a mock implementation of services.ExchangeService
+type MockExchangeService struct {
+	GetRateFunc  func(ctx context.Context, from, to *database.Currency) (float64, error)
+	ConvertFunc  func(ctx context.Context, from, to *database.Currency, amount float64) (float64, error)
+}
+
+func (m *MockExchangeService) GetRate(ctx context.Context, from, to *database.Currency) (float64, error) {
+	if m.GetRateFunc != nil {
+		return m.GetRateFunc(ctx, from, to)
+	}
+	return 1.0, nil
+}
+
+func (m *MockExchangeService) Convert(ctx context.Context, from, to *database.Currency, amount float64) (float64, error) {
+	if m.ConvertFunc != nil {
+		return m.ConvertFunc(ctx, from, to, amount)
+	}
+	return amount, nil
 }
 
 // MockNotificationService is a mock implementation of services.NotificationService

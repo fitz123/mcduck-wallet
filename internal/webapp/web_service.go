@@ -165,6 +165,127 @@ func (ws *WebService) AuthMiddleware(next http.Handler) http.Handler {
 	return ws.authService.AuthMiddleware(next)
 }
 
+func (ws *WebService) GetExchangeForm(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserIDFromContext(r.Context())
+
+	user, err := ws.userService.GetUser(r.Context(), userID)
+	if err != nil {
+		logger.Error("Failed to get user", "error", err)
+		http.Error(w, "Failed to fetch user", http.StatusInternalServerError)
+		return
+	}
+
+	balances, err := ws.coreService.GetBalances(r.Context(), userID)
+	if err != nil {
+		logger.Error("Failed to get balances", "error", err)
+		http.Error(w, "Failed to fetch balances", http.StatusInternalServerError)
+		return
+	}
+
+	currencies, err := ws.coreService.ListCurrencies(r.Context())
+	if err != nil {
+		logger.Error("Failed to get currencies", "error", err)
+		http.Error(w, "Failed to fetch currencies", http.StatusInternalServerError)
+		return
+	}
+
+	component := views.ExchangeForm(balances, currencies, user)
+	if err := component.Render(r.Context(), w); err != nil {
+		logger.Error("Error rendering exchange form", "error", err)
+		http.Error(w, "Error rendering page", http.StatusInternalServerError)
+	}
+}
+
+func (ws *WebService) GetExchangePreview(w http.ResponseWriter, r *http.Request) {
+	fromCurrency := strings.ToUpper(r.URL.Query().Get("from_currency"))
+	toCurrency := strings.ToUpper(r.URL.Query().Get("to_currency"))
+	amountStr := r.URL.Query().Get("amount")
+
+	// Validate inputs
+	if fromCurrency == "" || toCurrency == "" || amountStr == "" {
+		component := views.ExchangePreviewError("Enter amount to see preview")
+		component.Render(r.Context(), w)
+		return
+	}
+
+	if fromCurrency == toCurrency {
+		component := views.ExchangePreviewError("Select different currencies")
+		component.Render(r.Context(), w)
+		return
+	}
+
+	amount, err := strconv.ParseFloat(amountStr, 64)
+	if err != nil || amount < 0.01 {
+		component := views.ExchangePreviewError("Enter valid amount")
+		component.Render(r.Context(), w)
+		return
+	}
+
+	// Get exchange rate
+	rate, err := ws.coreService.GetExchangeRate(r.Context(), fromCurrency, toCurrency)
+	if err != nil {
+		logger.Error("Failed to get exchange rate", "error", err)
+		component := views.ExchangePreviewError("Unable to get exchange rate")
+		component.Render(r.Context(), w)
+		return
+	}
+
+	toAmount := amount * rate
+	component := views.ExchangePreview(amount, fromCurrency, toAmount, toCurrency, rate)
+	component.Render(r.Context(), w)
+}
+
+func (ws *WebService) ExchangeMoney(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserIDFromContext(r.Context())
+	r.ParseForm()
+
+	fromCurrency := strings.ToUpper(r.FormValue("from_currency"))
+	toCurrency := strings.ToUpper(r.FormValue("to_currency"))
+	amountStr := r.FormValue("amount")
+
+	if fromCurrency == "" || toCurrency == "" {
+		ws.handleResponse(w, r, userID, Response{
+			Message:    "Both currencies are required",
+			Error:      fmt.Errorf("both currencies are required"),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	if fromCurrency == toCurrency {
+		ws.handleResponse(w, r, userID, Response{
+			Message:    "Cannot exchange to same currency",
+			Error:      fmt.Errorf("cannot exchange to same currency"),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	amount, err := strconv.ParseFloat(amountStr, 64)
+	if err != nil || amount < 0.01 {
+		ws.handleResponse(w, r, userID, Response{
+			Message:    "Invalid amount (minimum 0.01)",
+			Error:      fmt.Errorf("invalid amount"),
+			StatusCode: http.StatusBadRequest,
+		})
+		return
+	}
+
+	err = ws.coreService.ExchangeMoney(r.Context(), userID, fromCurrency, toCurrency, amount)
+	if err != nil {
+		ws.handleResponse(w, r, userID, Response{
+			Message:    "Exchange failed",
+			Error:      err,
+			StatusCode: http.StatusInternalServerError,
+		})
+		return
+	}
+
+	ws.handleResponse(w, r, userID, Response{
+		Message: fmt.Sprintf("Successfully exchanged %.2f %s to %s", amount, fromCurrency, toCurrency),
+	})
+}
+
 func (ws *WebService) GetAddCurrencyForm(w http.ResponseWriter, r *http.Request) {
 	component := views.AddCurrencyForm()
 	if err := component.Render(r.Context(), w); err != nil {
@@ -180,8 +301,15 @@ func (ws *WebService) AddCurrency(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(r.FormValue("code"))
 	name := r.FormValue("name")
 	sign := r.FormValue("sign")
+	isReal := r.FormValue("is_real") == "true"
+	fixedRate := 0.0
+	if rateStr := r.FormValue("fixed_rate"); rateStr != "" {
+		if rate, err := strconv.ParseFloat(rateStr, 64); err == nil {
+			fixedRate = rate
+		}
+	}
 
-	err := ws.coreService.AddCurrency(r.Context(), code, name, sign)
+	err := ws.coreService.AddCurrency(r.Context(), code, name, sign, isReal, fixedRate)
 	if err != nil {
 		ws.handleResponse(w, r, userID, Response{
 			Message:    "Failed to add currency",

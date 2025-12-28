@@ -42,17 +42,23 @@ func (bs *BotService) registerHandlers() {
 	bs.bot.Handle("/balance", bs.handleBalance)
 	bs.bot.Handle("/transfer", bs.handleTransfer)
 	bs.bot.Handle("/history", bs.handleHistory)
+	bs.bot.Handle("/exchange", bs.handleExchange)
 	bs.bot.Handle("/set", bs.handleAdminSet)
 	bs.bot.Handle("/listusers", bs.handleAdminListUsers)
 	bs.bot.Handle("/disableuser", bs.handleAdminDisableUser)
 	bs.bot.Handle("/destroyuser", bs.handleAdminDestroyUser)
 	bs.bot.Handle("/adduser", bs.handleAdminAddUser)
 	bs.bot.Handle("/addcurrency", bs.handleAddCurrency)
+	bs.bot.Handle("/setrate", bs.handleSetRate)
 	bs.bot.Handle("/setdefaultcurrency", bs.handleAdminSetDefaultCurrency)
 
 	// Callback handlers for pagination
 	bs.bot.Handle("\fhistory_prev", bs.handleHistoryCallback)
 	bs.bot.Handle("\fhistory_next", bs.handleHistoryCallback)
+
+	// Callback handlers for exchange
+	bs.bot.Handle("\fexchange_confirm", bs.handleExchangeConfirm)
+	bs.bot.Handle("\fexchange_cancel", bs.handleExchangeCancel)
 }
 
 func (bs *BotService) handleStart(c tele.Context) error {
@@ -140,6 +146,90 @@ func (bs *BotService) handleTransfer(c tele.Context) error {
 	}
 
 	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, currencyCode, toUsername))
+}
+
+func (bs *BotService) handleExchange(c tele.Context) error {
+	ctx := context.Background()
+	args := c.Args()
+	if len(args) != 3 {
+		return c.Send("Usage: /exchange <amount> <from_currency> <to_currency>\nExample: /exchange 100 USD EUR")
+	}
+
+	amount, err := strconv.ParseFloat(args[0], 64)
+	if err != nil || amount < 0.01 {
+		return c.Send("Invalid amount. Please enter a positive number (minimum 0.01).")
+	}
+
+	fromCode := strings.ToUpper(args[1])
+	toCode := strings.ToUpper(args[2])
+
+	if fromCode == toCode {
+		return c.Send("Cannot exchange to the same currency.")
+	}
+
+	// Get exchange rate for preview
+	rate, err := bs.coreService.GetExchangeRate(ctx, fromCode, toCode)
+	if err != nil {
+		return c.Send(fmt.Sprintf("Exchange error: %v", err))
+	}
+
+	resultAmount := amount * rate
+
+	// Build confirmation keyboard
+	confirmBtn := tele.InlineButton{
+		Unique: "exchange_confirm",
+		Text:   "Confirm",
+		Data:   fmt.Sprintf("%.2f|%s|%s", amount, fromCode, toCode),
+	}
+	cancelBtn := tele.InlineButton{
+		Unique: "exchange_cancel",
+		Text:   "Cancel",
+	}
+
+	keyboard := &tele.ReplyMarkup{
+		InlineKeyboard: [][]tele.InlineButton{{confirmBtn, cancelBtn}},
+	}
+
+	message := fmt.Sprintf("*Exchange Preview*\n\nYou will exchange:\n*%.2f %s* → *%.2f %s*\n\nRate: %.4f",
+		amount, fromCode, resultAmount, toCode, rate)
+
+	return c.Send(message, &tele.SendOptions{ParseMode: tele.ModeMarkdown}, keyboard)
+}
+
+func (bs *BotService) handleExchangeConfirm(c tele.Context) error {
+	ctx := context.Background()
+	data := c.Callback().Data
+
+	parts := strings.Split(data, "|")
+	if len(parts) != 3 {
+		return c.Respond(&tele.CallbackResponse{Text: "Invalid exchange data"})
+	}
+
+	amount, err := strconv.ParseFloat(parts[0], 64)
+	if err != nil {
+		return c.Respond(&tele.CallbackResponse{Text: "Invalid amount"})
+	}
+	fromCode := parts[1]
+	toCode := parts[2]
+
+	err = bs.coreService.ExchangeMoney(ctx, c.Sender().ID, fromCode, toCode, amount)
+	if err != nil {
+		c.Bot().Edit(c.Callback().Message, fmt.Sprintf("Exchange failed: %v", err))
+		return c.Respond()
+	}
+
+	// Get the result for display
+	rate, _ := bs.coreService.GetExchangeRate(ctx, fromCode, toCode)
+	resultAmount := amount * rate
+
+	message := fmt.Sprintf("Exchange successful!\n\n%.2f %s → %.2f %s", amount, fromCode, resultAmount, toCode)
+	c.Bot().Edit(c.Callback().Message, message)
+	return c.Respond()
+}
+
+func (bs *BotService) handleExchangeCancel(c tele.Context) error {
+	c.Bot().Edit(c.Callback().Message, "Exchange cancelled.")
+	return c.Respond()
 }
 
 const historyPageSize = 10
@@ -398,20 +488,65 @@ func (bs *BotService) handleAddCurrency(c tele.Context) error {
 	ctx := context.Background()
 
 	args := c.Args()
-	if len(args) != 3 {
-		return c.Send("Usage: /addcurrency <code> <name> <sign>")
+	if len(args) < 3 || len(args) > 4 {
+		return c.Send("Usage:\n/addcurrency <code> <name> <sign> real - for real currencies (USD, EUR)\n/addcurrency <code> <name> <sign> <rate> - for made-up currencies (rate = units per 1 USD)")
 	}
 
 	code := strings.ToUpper(args[0])
 	name := args[1]
 	sign := args[2]
 
-	err := bs.coreService.AddCurrency(ctx, code, name, sign)
+	var isReal bool
+	var fixedRate float64
+
+	if len(args) == 4 {
+		if args[3] == "real" {
+			isReal = true
+			fixedRate = 0
+		} else {
+			rate, err := strconv.ParseFloat(args[3], 64)
+			if err != nil {
+				return c.Send("Invalid rate. Use 'real' for real currencies or a number for made-up currencies.")
+			}
+			isReal = false
+			fixedRate = rate
+		}
+	}
+
+	err := bs.coreService.AddCurrency(ctx, code, name, sign, isReal, fixedRate)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Failed to add currency: %v", err))
 	}
 
-	return c.Send(fmt.Sprintf("Currency %s (%s) with sign %s has been successfully added.", code, name, sign))
+	if isReal {
+		return c.Send(fmt.Sprintf("Real currency %s (%s) with sign %s has been added.", code, name, sign))
+	}
+	return c.Send(fmt.Sprintf("Currency %s (%s) with sign %s and rate %.2f (per USD) has been added.", code, name, sign, fixedRate))
+}
+
+func (bs *BotService) handleSetRate(c tele.Context) error {
+	ctx := context.Background()
+	if !bs.userService.IsAdmin(ctx, c.Sender().ID) {
+		return c.Send(messages.ErrUnauthorized)
+	}
+
+	args := c.Args()
+	if len(args) != 2 {
+		return c.Send("Usage: /setrate <currency_code> <rate>\nRate = units per 1 USD")
+	}
+
+	code := strings.ToUpper(args[0])
+	rate, err := strconv.ParseFloat(args[1], 64)
+	if err != nil {
+		return c.Send("Invalid rate. Please enter a number.")
+	}
+
+	err = bs.coreService.SetCurrencyRate(ctx, code, rate)
+	if err != nil {
+		return c.Send(fmt.Sprintf("Failed to set rate: %v", err))
+	}
+
+	return c.Send(fmt.Sprintf("Exchange rate for %s set to %.4f (per USD).", code, rate))
 }
 
 func (bs *BotService) handleAdminSetDefaultCurrency(c tele.Context) error {

@@ -1,0 +1,97 @@
+package views
+
+import (
+	"fmt"
+	"github.com/fitz123/mcduck-wallet/internal/database"
+)
+
+templ ExchangeForm(balances []database.Balance, currencies []database.Currency, user *database.User) {
+	<main data-page="exchange">
+		<header>
+			<h2>Currency Exchange</h2>
+		</header>
+		<form hx-post="/exchange" hx-target="body">
+			<label for="from_currency">
+				From Currency
+				<select
+					id="from_currency"
+					name="from_currency"
+					required
+					hx-get="/exchange-preview"
+					hx-trigger="change"
+					hx-target="#exchange-preview"
+					hx-include="[name='amount'], [name='to_currency']"
+				>
+					for _, balance := range balances {
+						if balance.Amount > 0 {
+							<option
+								value={ balance.Currency.Code }
+								selected?={ user.LastUsedCurrencyID == balance.Currency.ID }
+							>
+								{ balance.Currency.Name } ({ balance.Currency.Code }) - Balance: { fmt.Sprintf("%.2f", balance.Amount) }
+							</option>
+						}
+					}
+				</select>
+			</label>
+			<label for="amount">
+				Amount
+				<input
+					type="number"
+					id="amount"
+					name="amount"
+					min="0.01"
+					step="0.01"
+					required
+					hx-get="/exchange-preview"
+					hx-trigger="input changed delay:300ms"
+					hx-target="#exchange-preview"
+					hx-include="[name='from_currency'], [name='to_currency']"
+				/>
+			</label>
+			<label for="to_currency">
+				To Currency
+				<select
+					id="to_currency"
+					name="to_currency"
+					required
+					hx-get="/exchange-preview"
+					hx-trigger="change"
+					hx-target="#exchange-preview"
+					hx-include="[name='amount'], [name='from_currency']"
+				>
+					for _, currency := range currencies {
+						<option value={ currency.Code }>
+							{ currency.Name } ({ currency.Code })
+						</option>
+					}
+				</select>
+			</label>
+			<div id="exchange-preview"></div>
+			<button type="submit">Exchange</button>
+		</form>
+		<div>
+			<button hx-get="/dashboard" hx-target="body">
+				Back to Balances
+			</button>
+		</div>
+	</main>
+}
+
+templ ExchangePreview(fromAmount float64, fromCurrency string, toAmount float64, toCurrency string, rate float64) {
+	<article style="margin: 1rem 0; padding: 1rem; background: var(--pico-card-background-color);">
+		<strong>You will receive:</strong>
+		<div style="font-size: 1.5rem; margin: 0.5rem 0;">
+			{ fmt.Sprintf("%.2f", toAmount) } { toCurrency }
+		</div>
+		<small class="secondary">
+			Rate: 1 { fromCurrency } = { fmt.Sprintf("%.4f", rate) } { toCurrency }
+		</small>
+	</article>
+}
+
+templ ExchangePreviewError(message string) {
+	<article style="margin: 1rem 0; padding: 1rem;">
+		<small class="secondary">{ message }</small>
+	</article>
+}

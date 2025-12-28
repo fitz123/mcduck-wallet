@@ -46,14 +46,11 @@ templ scrollTrigger(nextOffset int) {
 
 templ transactionItem(t database.Transaction) {
 	<article style="display: flex; justify-content: space-between; align-items: center; ">
-		<!-- Left side: from, to and date -->
+		<!-- Left side: description and date -->
 		<div>
 			<div>
 				<strong>
-					{   fmt.Sprintf("%s %s %s",
-                            trUsername(t.FromUsername),
-                            ternary(t.Type == "admin_set_balance", "SET", "→"),
-                            trUsername(t.ToUsername)) }
+					{ transactionDescription(t) }
 				</strong>
 			</div>
 			<small class="secondary">
@@ -65,4 +62,21 @@ templ transactionItem(t database.Transaction) {
 			{ fmt.Sprintf("%.2f", t.Amount) } { t.Balance.Currency.Code }
 		</strong>
 	</article>
+}
+
+func transactionDescription(t database.Transaction) string {
+	switch t.Type {
+	case "transfer_out":
+		return fmt.Sprintf("%s → %s", trUsername(t.FromUsername), trUsername(t.ToUsername))
+	case "transfer_in":
+		return fmt.Sprintf("%s → %s", trUsername(t.FromUsername), trUsername(t.ToUsername))
+	case "exchange_out":
+		return "Exchange (out)"
+	case "exchange_in":
+		return "Exchange (in)"
+	case "admin_set_balance":
+		return fmt.Sprintf("%s SET %s", trUsername(t.FromUsername), trUsername(t.ToUsername))
+	default:
+		return "System"
+	}
 }

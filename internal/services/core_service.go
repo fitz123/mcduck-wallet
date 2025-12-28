@@ -9,6 +9,7 @@ import (
 
 	"github.com/fitz123/mcduck-wallet/internal/database"
 	"github.com/fitz123/mcduck-wallet/internal/logger"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -24,22 +25,29 @@ type CoreService interface {
 	DisableUser(ctx context.Context, username string) error
 	AddUser(ctx context.Context, telegramID int64, username string) error
 	DestroyUser(ctx context.Context, username string) error
-	AddCurrency(ctx context.Context, code, name, sign string) error
+	AddCurrency(ctx context.Context, code, name, sign string, isReal bool, fixedRate float64) error
 	SetDefaultCurrency(ctx context.Context, code string) error
 	GetPreviousRecipients(ctx context.Context, userID uint) ([]string, error)
+	// Exchange methods
+	ExchangeMoney(ctx context.Context, telegramID int64, fromCurrencyCode, toCurrencyCode string, amount float64) error
+	GetExchangeRate(ctx context.Context, fromCurrencyCode, toCurrencyCode string) (float64, error)
+	SetCurrencyRate(ctx context.Context, currencyCode string, rate float64) error
+	ListCurrencies(ctx context.Context) ([]database.Currency, error)
 }
 
 type coreService struct {
-	db          *database.DB
-	userService UserService
-	notifier    NotificationService
+	db              *database.DB
+	userService     UserService
+	notifier        NotificationService
+	exchangeService ExchangeService
 }
 
-func NewCoreService(db *database.DB, userService UserService, notifier NotificationService) CoreService {
+func NewCoreService(db *database.DB, userService UserService, notifier NotificationService, exchangeService ExchangeService) CoreService {
 	return &coreService{
-		db:          db,
-		userService: userService,
-		notifier:    notifier,
+		db:              db,
+		userService:     userService,
+		notifier:        notifier,
+		exchangeService: exchangeService,
 	}
 }
 
@@ -443,11 +451,13 @@ func (s *coreService) DestroyUser(ctx context.Context, username string) error {
 	})
 }
 
-func (s *coreService) AddCurrency(ctx context.Context, code, name, sign string) error {
+func (s *coreService) AddCurrency(ctx context.Context, code, name, sign string, isReal bool, fixedRate float64) error {
 	currency := &database.Currency{
-		Code: code,
-		Name: name,
-		Sign: sign,
+		Code:      code,
+		Name:      name,
+		Sign:      sign,
+		IsReal:    isReal,
+		FixedRate: fixedRate,
 	}
 	return s.db.Conn.WithContext(ctx).Create(currency).Error
 }
@@ -468,4 +478,165 @@ func (s *coreService) SetDefaultCurrency(ctx context.Context, code string) error
 		}
 		return nil
 	})
+}
+
+// Exchange methods
+
+func (s *coreService) GetExchangeRate(ctx context.Context, fromCurrencyCode, toCurrencyCode string) (float64, error) {
+	fromCurrency, err := s.GetCurrencyByCode(ctx, fromCurrencyCode)
+	if err != nil {
+		return 0, fmt.Errorf("from currency not found: %w", err)
+	}
+	toCurrency, err := s.GetCurrencyByCode(ctx, toCurrencyCode)
+	if err != nil {
+		return 0, fmt.Errorf("to currency not found: %w", err)
+	}
+	return s.exchangeService.GetRate(ctx, fromCurrency, toCurrency)
+}
+
+func (s *coreService) SetCurrencyRate(ctx context.Context, currencyCode string, rate float64) error {
+	if rate <= 0 {
+		return errors.New("rate must be positive")
+	}
+
+	// Get currency to check if it's a real currency
+	var currency database.Currency
+	if err := s.db.Conn.WithContext(ctx).Where("code = ?", currencyCode).First(&currency).Error; err != nil {
+		return fmt.Errorf("currency %s not found", currencyCode)
+	}
+
+	if currency.IsReal {
+		return errors.New("cannot set fixed rate for real currencies")
+	}
+
+	return s.db.Conn.WithContext(ctx).
+		Model(&database.Currency{}).
+		Where("code = ?", currencyCode).
+		Update("fixed_rate", rate).Error
+}
+
+func (s *coreService) ExchangeMoney(ctx context.Context, telegramID int64, fromCurrencyCode, toCurrencyCode string, amount float64) error {
+	if amount < 0.01 {
+		return errors.New("exchange amount must be at least 0.01")
+	}
+	if fromCurrencyCode == toCurrencyCode {
+		return errors.New("cannot exchange to same currency")
+	}
+
+	user, err := s.userService.GetUser(ctx, telegramID)
+	if err != nil {
+		return err
+	}
+
+	fromCurrency, err := s.GetCurrencyByCode(ctx, fromCurrencyCode)
+	if err != nil {
+		return fmt.Errorf("from currency not found: %w", err)
+	}
+	toCurrency, err := s.GetCurrencyByCode(ctx, toCurrencyCode)
+	if err != nil {
+		return fmt.Errorf("to currency not found: %w", err)
+	}
+
+	// Get exchange rate
+	rate, err := s.exchangeService.GetRate(ctx, fromCurrency, toCurrency)
+	if err != nil {
+		return fmt.Errorf("failed to get exchange rate: %w", err)
+	}
+
+	resultAmount := amount * rate
+
+	// Get or create balances
+	var fromBalance database.Balance
+	err = s.db.Conn.WithContext(ctx).
+		Where("user_id = ? AND currency_id = ?", user.ID, fromCurrency.ID).
+		First(&fromBalance).Error
+	if err != nil {
+		return fmt.Errorf("you don't have a %s balance", fromCurrencyCode)
+	}
+
+	if fromBalance.Amount < amount {
+		return fmt.Errorf("insufficient %s balance", fromCurrencyCode)
+	}
+
+	var toBalance database.Balance
+	err = s.db.Conn.WithContext(ctx).
+		Where("user_id = ? AND currency_id = ?", user.ID, toCurrency.ID).
+		First(&toBalance).Error
+	if err != nil {
+		// Create new balance for target currency
+		toBalance = database.Balance{
+			UserID:     user.ID,
+			CurrencyID: toCurrency.ID,
+			Amount:     0,
+		}
+	}
+
+	// Update balances
+	fromBalance.Amount -= amount
+	toBalance.Amount += resultAmount
+
+	now := time.Now()
+	exchangeRef := uuid.New().String()
+
+	// Create transactions
+	fromTransaction := database.Transaction{
+		UserID:       user.ID,
+		BalanceID:    fromBalance.ID,
+		Amount:       -amount,
+		Type:         "exchange_out",
+		FromUserID:   user.ID,
+		FromUsername: user.Username,
+		ToUserID:     user.ID,
+		ToUsername:   user.Username,
+		Timestamp:    now,
+		BalanceAfter: fromBalance.Amount,
+		ExchangeRef:  exchangeRef,
+		ExchangeRate: rate,
+	}
+
+	toTransaction := database.Transaction{
+		UserID:       user.ID,
+		BalanceID:    toBalance.ID,
+		Amount:       resultAmount,
+		Type:         "exchange_in",
+		FromUserID:   user.ID,
+		FromUsername: user.Username,
+		ToUserID:     user.ID,
+		ToUsername:   user.Username,
+		Timestamp:    now,
+		BalanceAfter: toBalance.Amount,
+		ExchangeRef:  exchangeRef,
+		ExchangeRate: rate,
+	}
+
+	// Save to database
+	return s.db.Conn.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(&fromBalance).Error; err != nil {
+			return err
+		}
+		if err := tx.Save(&toBalance).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&fromTransaction).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&toTransaction).Error; err != nil {
+			return err
+		}
+
+		// Notify user
+		message := fmt.Sprintf("You exchanged %.2f %s for %.2f %s (rate: %.4f)",
+			amount, fromCurrencyCode, resultAmount, toCurrencyCode, rate)
+		if err := s.notifier.NotifyUser(ctx, user.TelegramID, message); err != nil {
+			logger.Error("Failed to send exchange notification", "error", err)
+		}
+
+		return nil
+	})
+}
+
+func (s *coreService) ListCurrencies(ctx context.Context) ([]database.Currency, error) {
+	var currencies []database.Currency
+	err := s.db.Conn.WithContext(ctx).Find(&currencies).Error
+	return currencies, err
 }
