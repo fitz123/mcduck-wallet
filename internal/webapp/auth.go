@@ -50,7 +50,14 @@ func (as *AuthService) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		logger.Info("AuthMiddleware: Authenticated user", "userID", userID)
+		username, _ := as.getUsernameFromInitData(initData)
+		if username == "" {
+			logger.Warn("AuthMiddleware: User has no username", "userID", userID)
+			http.Error(w, "Please set up a username in Telegram settings first", http.StatusForbidden)
+			return
+		}
+
+		logger.Info("AuthMiddleware: Authenticated user", "userID", userID, "username", username)
 
 		// Set user ID in context
 		ctx := context.WithValue(r.Context(), "userID", userID)
@@ -108,6 +115,18 @@ func (as *AuthService) getUserIDFromInitData(initData string) (int64, error) {
 		return 0, fmt.Errorf("user ID not found")
 	}
 	return int64(userID), nil
+}
+
+func (as *AuthService) getUsernameFromInitData(initData string) (string, error) {
+	values, _ := url.ParseQuery(initData)
+	userDataStr := values.Get("user")
+	var userData map[string]interface{}
+	err := json.Unmarshal([]byte(userDataStr), &userData)
+	if err != nil {
+		return "", err
+	}
+	username, _ := userData["username"].(string)
+	return username, nil
 }
 
 func GetUserIDFromContext(ctx context.Context) int64 {
