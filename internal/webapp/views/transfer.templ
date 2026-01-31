@@ -38,6 +38,10 @@ templ TransferForm(balances []database.Balance, previousRecipients []string, use
 					}
 				</select>
 			</label>
+			<label for="note">
+				Note (optional)
+				<textarea id="note" name="note" maxlength="200" placeholder="Add a message..." rows="2"></textarea>
+			</label>
 			<button type="submit">Confirm Transfer</button>
 		</form>
 	</main>

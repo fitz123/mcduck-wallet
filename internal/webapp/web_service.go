@@ -84,7 +84,7 @@ func (ws *WebService) TransferMoney(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDFromContext(r.Context())
 	r.ParseForm()
 
-	toUsername, amount, currencyCode, err := ws.parseTransferFormValues(r)
+	toUsername, amount, currencyCode, note, err := ws.parseTransferFormValues(r)
 	if err != nil {
 		ws.handleResponse(w, r, userID, Response{
 			Message:    err.Error(),
@@ -112,7 +112,7 @@ func (ws *WebService) TransferMoney(w http.ResponseWriter, r *http.Request) {
 		// Don't return error to user, just log it
 	}
 
-	err = ws.coreService.TransferMoney(r.Context(), userID, toUsername, amount, currencyCode)
+	err = ws.coreService.TransferMoney(r.Context(), userID, toUsername, amount, currencyCode, note)
 	if err != nil {
 		ws.handleResponse(w, r, userID, Response{
 			Message:    "Transfer failed",
@@ -326,37 +326,39 @@ func (ws *WebService) AddCurrency(w http.ResponseWriter, r *http.Request) {
 
 // Helper functions
 
-func (ws *WebService) parseTransferFormValues(r *http.Request) (string, float64, string, error) {
+func (ws *WebService) parseTransferFormValues(r *http.Request) (string, float64, string, string, error) {
 	toUsername := strings.TrimPrefix(r.FormValue("to_username"), "@")
 	toUsername = strings.ToLower(toUsername)
 	if toUsername == "" {
-		return "", 0, "", fmt.Errorf("Recipient username is required")
+		return "", 0, "", "", fmt.Errorf("Recipient username is required")
 	}
 
 	amountStr := r.FormValue("amount")
 	if amountStr == "" {
-		return "", 0, "", fmt.Errorf("Amount is required")
+		return "", 0, "", "", fmt.Errorf("Amount is required")
 	}
 
 	amount, err := strconv.ParseFloat(amountStr, 64)
 	if err != nil {
-		return "", 0, "", fmt.Errorf("Invalid amount")
+		return "", 0, "", "", fmt.Errorf("Invalid amount")
 	}
 
 	if amount < 0.01 {
-		return "", 0, "", fmt.Errorf("Amount must be at least 0.01")
+		return "", 0, "", "", fmt.Errorf("Amount must be at least 0.01")
 	}
 
 	currencyCode := r.FormValue("currency")
 	if currencyCode == "" {
 		defaultCurrency, err := ws.coreService.GetDefaultCurrency(r.Context())
 		if err != nil {
-			return "", 0, "", fmt.Errorf("Failed to get default currency")
+			return "", 0, "", "", fmt.Errorf("Failed to get default currency")
 		}
 		currencyCode = defaultCurrency.Code
 	}
 
-	return toUsername, amount, currencyCode, nil
+	note := strings.TrimSpace(r.FormValue("note"))
+
+	return toUsername, amount, currencyCode, note, nil
 }
 
 type Response struct {

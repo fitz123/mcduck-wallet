@@ -118,34 +118,63 @@ func (bs *BotService) handleBalance(c tele.Context) error {
 
 func (bs *BotService) handleTransfer(c tele.Context) error {
 	ctx := context.Background()
-	args := c.Args()
-	if len(args) < 2 || len(args) > 3 {
-		return c.Send(messages.UsageTransfer)
-	}
 
-	currencyCode := ""
-	if len(args) == 3 {
-		currencyCode = strings.ToUpper(args[2])
-	} else {
-		defaultCurrency, err := bs.coreService.GetDefaultCurrency(ctx)
-		if err != nil {
-			return c.Send("Error fetching default currency: " + err.Error())
-		}
-		currencyCode = defaultCurrency.Code
-	}
-
-	toUsername := strings.TrimPrefix(args[0], "@")
-	amount, err := strconv.ParseFloat(args[1], 64)
+	// Parse message text to extract quoted note
+	msgText := c.Message().Text
+	toUsername, amount, currencyCode, note, err := bs.parseTransferCommand(ctx, msgText)
 	if err != nil {
-		return c.Send(messages.ErrInvalidAmount)
+		return c.Send(err.Error())
 	}
 
-	err = bs.coreService.TransferMoney(ctx, c.Sender().ID, toUsername, amount, currencyCode)
+	err = bs.coreService.TransferMoney(ctx, c.Sender().ID, toUsername, amount, currencyCode, note)
 	if err != nil {
 		return c.Send("Transfer failed: " + err.Error())
 	}
 
 	return c.Send(fmt.Sprintf(messages.InfoTransferSuccessful, amount, currencyCode, toUsername))
+}
+
+// parseTransferCommand parses: /transfer @username amount [currency] ["note"]
+func (bs *BotService) parseTransferCommand(ctx context.Context, msgText string) (toUsername string, amount float64, currencyCode string, note string, err error) {
+	// Extract quoted note if present
+	quoteStart := strings.Index(msgText, "\"")
+	if quoteStart != -1 {
+		quoteEnd := strings.LastIndex(msgText, "\"")
+		if quoteEnd > quoteStart {
+			note = msgText[quoteStart+1 : quoteEnd]
+			if len(note) > 200 {
+				note = note[:200]
+			}
+			msgText = strings.TrimSpace(msgText[:quoteStart])
+		}
+	}
+
+	// Split remaining text into args
+	parts := strings.Fields(msgText)
+	if len(parts) < 3 || len(parts) > 4 {
+		return "", 0, "", "", fmt.Errorf(messages.UsageTransfer)
+	}
+
+	// parts[0] is /transfer, parts[1] is username, parts[2] is amount
+	toUsername = strings.TrimPrefix(parts[1], "@")
+	toUsername = strings.ToLower(toUsername)
+
+	amount, err = strconv.ParseFloat(parts[2], 64)
+	if err != nil {
+		return "", 0, "", "", fmt.Errorf(messages.ErrInvalidAmount)
+	}
+
+	if len(parts) == 4 {
+		currencyCode = strings.ToUpper(parts[3])
+	} else {
+		defaultCurrency, err := bs.coreService.GetDefaultCurrency(ctx)
+		if err != nil {
+			return "", 0, "", "", fmt.Errorf("Error fetching default currency: %v", err)
+		}
+		currencyCode = defaultCurrency.Code
+	}
+
+	return toUsername, amount, currencyCode, note, nil
 }
 
 func (bs *BotService) handleExchange(c tele.Context) error {

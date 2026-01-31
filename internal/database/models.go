@@ -40,11 +40,12 @@ type Transaction struct {
 	BalanceAfter float64
 	ExchangeRef  string  // UUID linking exchange_out and exchange_in transactions
 	ExchangeRate float64 // Exchange rate used (for audit trail)
+	Note         string  // Optional transfer note (max 200 chars)
 }
 
 type Currency struct {
 	gorm.Model
-	Code      string  `gorm:"uniqueIndex"`
+	Code      string `gorm:"uniqueIndex"`
 	Name      string
 	Sign      string
 	IsDefault bool    `gorm:"default:false"`
