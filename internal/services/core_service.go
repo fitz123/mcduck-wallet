@@ -16,7 +16,7 @@ import (
 type CoreService interface {
 	GetBalances(ctx context.Context, telegramID int64) ([]database.Balance, error)
 	GetDefaultCurrency(ctx context.Context) (*database.Currency, error)
-	TransferMoney(ctx context.Context, fromTelegramID int64, toUsername string, amount float64, currencyCode string) error
+	TransferMoney(ctx context.Context, fromTelegramID int64, toUsername string, amount float64, currencyCode string, note string) error
 	GetTransactionHistory(ctx context.Context, telegramID int64, offset, limit int) ([]database.Transaction, int64, error)
 	SetAdminStatus(ctx context.Context, targetUsername string, isAdmin bool) error
 	AdminSetBalance(ctx context.Context, adminTelegramID int64, targetUsername string, amount float64, currencyCode string) error
@@ -85,7 +85,11 @@ func (s *coreService) GetDefaultCurrency(ctx context.Context) (*database.Currenc
 	return &currency, nil
 }
 
-func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, toUsername string, amount float64, currencyCode string) error {
+func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, toUsername string, amount float64, currencyCode string, note string) error {
+	// Truncate note to 200 characters
+	if len(note) > 200 {
+		note = note[:200]
+	}
 	fromUser, err := s.userService.GetUser(ctx, fromTelegramID)
 	if err != nil {
 		return err
@@ -156,6 +160,7 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 		ToUsername:   toUser.Username,
 		Timestamp:    now,
 		BalanceAfter: fromBalance.Amount,
+		Note:         note,
 	}
 	toTransaction := database.Transaction{
 		UserID:       toUser.ID,
@@ -168,6 +173,7 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 		ToUsername:   toUser.Username,
 		Timestamp:    now,
 		BalanceAfter: toBalance.Amount,
+		Note:         note,
 	}
 
 	// Save to database
@@ -187,12 +193,18 @@ func (s *coreService) TransferMoney(ctx context.Context, fromTelegramID int64, t
 
 		// Notify sender
 		senderMessage := fmt.Sprintf("You sent %.2f %s to @%s", amount, currencyCode, toUser.Username)
+		if note != "" {
+			senderMessage += fmt.Sprintf("\nNote: %s", note)
+		}
 		if err := s.notifier.NotifyUser(ctx, fromUser.TelegramID, senderMessage); err != nil {
 			logger.Error("Failed to send sender notification", "error", err)
 		}
 
 		// Notify recipient
 		recipientMessage := fmt.Sprintf("You received %.2f %s from @%s", amount, currencyCode, fromUser.Username)
+		if note != "" {
+			recipientMessage += fmt.Sprintf("\nNote: %s", note)
+		}
 		if err := s.notifier.NotifyUser(ctx, toUser.TelegramID, recipientMessage); err != nil {
 			logger.Error("Failed to send recipient notification", "error", err)
 		}

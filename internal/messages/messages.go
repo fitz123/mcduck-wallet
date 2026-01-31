@@ -8,5 +8,5 @@ const (
 	ErrUserNotFound        = "User not found."
 	ErrInvalidAmount       = "Invalid amount. Please provide a number greater than 0.01."
 	ErrUnauthorized        = "Unauthorized: This command is only available for admin accounts."
-	UsageTransfer          = "Usage: /transfer <@username> <amount> [<currency_code>]"
+	UsageTransfer          = "Usage: /transfer @username amount [currency] [\"note\"]"
 )
