@@ -8,7 +8,10 @@
 bin/
 
 # DB
-mcduck_wallet.db
+*.db
+*.db.backup
+*.db.old
+*.db.bak
 
 # result of templ rendering
 # ignoring all files with _templ.go suffix
