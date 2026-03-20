@@ -4,6 +4,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -82,7 +83,7 @@ func (bs *BotService) handleStart(c tele.Context) error {
 	}
 
 	// Create a keyboard with a WebApp button
-	webAppURL := "https://mcduck.120912.xyz"
+	webAppURL := os.Getenv("WEBAPP_URL")
 	webAppButton := tele.InlineButton{
 		Text: "Open McDuck Wallet",
 		WebApp: &tele.WebApp{
