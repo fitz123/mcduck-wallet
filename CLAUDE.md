@@ -31,9 +31,9 @@ templ generate ./...
 
 ## Server Deployment
 
-The app runs on remote server `mcduck` via nohup (not systemd). Deploy restarts the process:
+The app runs on remote server via nohup (not systemd). Deploy restarts the process:
 ```bash
-ssh mcduck 'pkill mcduck-wallet || true; cd ~/mcduck-wallet && nohup ./bin/mcduck-wallet > /dev/null 2>&1 &'
+ssh <server> 'pkill mcduck-wallet || true; cd ~/mcduck-wallet && nohup ./bin/mcduck-wallet > /dev/null 2>&1 &'
 ```
 
 Environment: `TELEGRAM_BOT_TOKEN` must be set. Server listens on port 80.
